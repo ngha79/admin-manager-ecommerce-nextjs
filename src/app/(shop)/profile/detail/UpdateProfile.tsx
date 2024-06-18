@@ -1,7 +1,12 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import React, { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import {
   Card,
   CardContent,
@@ -9,54 +14,46 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
+} from "@/components/ui/card";
+import { HttpError } from "@/lib/http";
+import { reFetchShop } from "@/utils/server";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { cn, ResponseExceptions } from "@/lib/utils";
 import {
   IProfileUserValidator,
   ProfileUserValidator,
-} from '@/lib/validators/account-credentials-validator'
-import { updateProfileShop } from '@/utils/actions/shop'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2 } from 'lucide-react'
-import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
+} from "@/lib/validators/account-credentials-validator";
+import { updateProfileShop } from "@/utils/actions/shop";
 
-interface IProfileUser {
-  avatar: string
-  background: string
-  userName: string
-  phoneNumber: string
-  email: string
-}
-
-const UpdateProfile = ({
-  userName,
-  phoneNumber,
-}: {
-  userName: string
-  phoneNumber: string
-}) => {
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+const UpdateProfile = () => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<IProfileUserValidator>({
     resolver: zodResolver(ProfileUserValidator),
-  })
+  });
 
   const onSubmit = async ({ userName, phoneNumber }: IProfileUserValidator) => {
-    setIsLoading(true)
-    const res = await updateProfileShop({ userName, phoneNumber })
-    setIsLoading(false)
-    if (res.error) {
-      return toast.error(res.message)
-    }
-    return toast.success('Cập nhật thông tin thành công')
-  }
+    startTransition(async () => {
+      try {
+        await updateProfileShop({ userName, phoneNumber });
+        await reFetchShop();
+        toast.success("Cập nhật thông tin thành công");
+        router.replace("/profile");
+      } catch (error) {
+        if (error instanceof HttpError) {
+          toast.error(error.payload.message);
+        } else {
+          toast.error(ResponseExceptions.DEFAULT_ERROR);
+        }
+      }
+    });
+  };
   return (
     <Card>
       <CardHeader>
@@ -71,10 +68,9 @@ const UpdateProfile = ({
           <Label htmlFor="userName">Tên</Label>
           <Input
             id="userName"
-            defaultValue={userName}
-            {...register('userName')}
+            {...register("userName")}
             className={cn({
-              'focus-visible:ring-red-500': errors.userName,
+              "focus-visible:ring-red-500": errors.userName,
             })}
           />
           {errors?.userName && (
@@ -85,11 +81,10 @@ const UpdateProfile = ({
           <Label htmlFor="phoneNumber">Số điện thoại</Label>
           <Input
             id="phoneNumber"
-            {...register('phoneNumber')}
+            {...register("phoneNumber")}
             className={cn({
-              'focus-visible:ring-red-500': errors.phoneNumber,
+              "focus-visible:ring-red-500": errors.phoneNumber,
             })}
-            defaultValue={phoneNumber}
           />
           {errors?.phoneNumber && (
             <p className="text-sm text-red-500">{errors.phoneNumber.message}</p>
@@ -97,16 +92,13 @@ const UpdateProfile = ({
         </div>
       </CardContent>
       <CardFooter>
-        <Button
-          disabled={isLoading}
-          onClick={handleSubmit(onSubmit)}
-        >
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button disabled={isPending} onClick={handleSubmit(onSubmit)}>
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Lưu thay đổi
         </Button>
       </CardFooter>
     </Card>
-  )
-}
+  );
+};
 
-export default UpdateProfile
+export default UpdateProfile;

@@ -1,67 +1,49 @@
-import { getSession } from './account'
+import http from "@/lib/http";
+import { getUserId } from "./account";
+import { IResponsePagination } from "../types/response-pagination";
 
 export const getListVoucherShop = async ({
   page = 1,
   limit,
-  search = '',
+  search = "",
   isActive,
 }: any) => {
-  const session = await getSession()
-  let url = ''
-  if (isActive) url += `&isActive=${isActive}`
-  const response = await fetch(
-    `http://localhost:8000/discounts?page=${page}&limit=${limit}&search=${search}&shopId=${session.userId}` +
+  const userId = await getUserId();
+  let url = "";
+  if (isActive) url += `&isActive=${isActive}`;
+  return await http.get<IResponsePagination>(
+    `/discounts?page=${page}&limit=${limit}&search=${search}&shopId=${userId}` +
       url,
     {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
+      next: {
+        tags: ["discounts"],
       },
-      cache: 'no-cache',
     }
-  )
-  return response.json()
-}
+  );
+};
 
 export const getVoucher = async (id: string) => {
-  const response = await fetch(`http://localhost:8000/discounts/${id}`, {
-    method: 'GET',
-    cache: 'no-cache',
-  })
-  return response.json()
-}
+  return await http.get<any>(`/discounts/${id}`, {});
+};
 
 export const updateVoucher = async (id: string, formData: any) => {
-  const response = await fetch(`http://localhost:8000/discounts/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(formData),
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-
-  return response.json()
-}
+  return await http.put(`/discounts/${id}`, formData, {
+    token: true,
+  });
+};
 
 export const createVoucher = async (formData: any) => {
-  const session = await getSession()
-  const response = await fetch(`http://localhost:8000/discounts`, {
-    method: 'POST',
-    body: JSON.stringify(formData),
-    headers: {
-      Authorization: `Bearer ${session.accessToken}`,
-      userid: session.userId,
-      'Content-Type': 'application/json',
-    },
-  })
-
-  return response.json()
-}
+  return await http.post(`/discounts`, formData, {
+    token: true,
+  });
+};
 
 export const deleteVoucher = async (id: string) => {
-  const response = await fetch(`http://localhost:8000/discounts/${id}`, {
-    method: 'DELETE',
-  })
-
-  return response.json()
-}
+  return await http.delete(
+    `/discounts/${id}`,
+    {},
+    {
+      token: true,
+    }
+  );
+};

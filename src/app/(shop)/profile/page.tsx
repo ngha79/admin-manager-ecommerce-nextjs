@@ -1,98 +1,61 @@
-import { profileShop } from '@/utils/actions/shop'
-import { Star, Store, UserRoundCheck, Users } from 'lucide-react'
-import Image from 'next/image'
-import React from 'react'
-import { formatDistanceToNow } from 'date-fns'
-import { vi } from 'date-fns/locale'
-import { Button, buttonVariants } from '@/components/ui/button'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import React from "react";
+import { vi } from "date-fns/locale";
+import { formatDistanceToNow } from "date-fns";
+
+import { profileShop } from "@/utils/actions/shop";
+import DescriptionShop from "./_components/DescriptionShop";
+import UpdateAvatarUser from "./_components/UpdateAvatarUser";
+import UpdateBackgroundUser from "./_components/UpdateBackgroundUser";
 
 const Page = async () => {
-  const profile = await profileShop()
-  if (profile.error) throw new Error(profile.message)
+  let profile = null;
+  try {
+    const response = await profileShop();
+    profile = response.payload;
+  } catch (error) {
+    return null;
+  }
+
+  if (!profile) return null;
+
   return (
     <div className="flex flex-col gap-4 py-8 px-4 flex-1 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row gap-4 h-max">
-        <div className="md:max-w-md w-full rounded-md shadow-md flex items-center gap-4 h-max">
-          <div className="w-full h-40 relative flex items-center justify-center rounded-md shadow-md gap-4">
-            <Image
-              alt="background"
-              src={profile.background}
-              fill
-              sizes="32"
-              className="absolute top-0 rounded-md left-0 z-0 blur-[1px]"
-            />
-            <div className="w-20 h-20 z-10 relative shadow-lg rounded-full overflow-hidden border cursor-pointer flex items-center justify-center">
-              <Image
-                alt="avatar"
-                src={profile.avatar}
-                fill
-              />
-            </div>
-            <div className="flex flex-col gap-1 z-10">
-              <h1 className="md:text-lg font-medium text-background line-clamp-1">
-                {profile.userName}
-              </h1>
-            </div>
-          </div>
+      <div className="relative z-10 bg-background shadow-md rounded-md">
+        <div className="w-full relative">
+          <UpdateBackgroundUser background={profile?.shop_background} />
+          <UpdateAvatarUser avatar={profile?.shop_avatar} />
         </div>
-        <div className="grid h-full min-h-32 p-3 grid-rows-2 gap-2 w-full px-8 bg-background rounded-md shadow-md">
-          <div className="grid sm:grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 text-sm ">
-              <span className="flex items-center gap-2 text-gray-700">
-                <Store size={18} />
-                <span className="line-clamp-1">Sản Phẩm Của Bạn:</span>
-              </span>
-              <span className="text-destructive line-clamp-1">4</span>
+        <div className="pt-20">
+          <div className="px-4 pb-6 text-center lg:pb-8 xl:pb-11">
+            <h3 className="pb-1.5 mt-4 text-2xl font-medium">
+              {profile?.userName}
+            </h3>
+            <div className="mx-auto mb-5 mt-4 text-sm font-medium grid max-w-96 grid-cols-3 rounded-md border border-slate-300 py-2.5 shadow-md">
+              <div className="border-r px-2 line-clamp-1 ">
+                {profile?.productCount} Sản phẩm
+              </div>
+              <div className="border-r px-2 line-clamp-1 ">
+                {profile?.followersCount} Followers
+              </div>
+              <div className="px-2 line-clamp-1 ">
+                {profile?.totalCommentCount} Đánh giá
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="flex items-center gap-2 text-gray-700">
-                <Users size={18} />
-                <span className="line-clamp-1">Người Theo Dõi:</span>
-              </span>
-              <span className="text-destructive line-clamp-1">
-                {profile?.followers?.length}
-              </span>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="flex items-center gap-2 text-gray-700">
-                <Star size={18} />
-                <span className="line-clamp-1">Được Đánh Giá:</span>
-              </span>
-              <span className="text-destructive line-clamp-1">
-                4.9 (240,3k Đánh Giá)
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="flex items-center gap-2 text-gray-700">
-                <UserRoundCheck size={18} />
-                <span className="line-clamp-1">Bạn Tham Gia:</span>
-              </span>
-              <span className="text-destructive line-clamp-1">
-                {formatDistanceToNow(new Date(profile.createdAt), {
+            <div className="flex items-center justify-center max-w-64 mx-auto gap-6 font-medium">
+              <span className="w-20 text-end">Tham Gia:</span>
+              <span className="text-destructive">
+                {formatDistanceToNow(new Date(profile?.shop_createdAt), {
                   addSuffix: true,
                   locale: vi,
                 })}
               </span>
             </div>
+            <DescriptionShop description={profile?.shop_description} />
           </div>
         </div>
       </div>
-      <Link
-        href={'/profile/update'}
-        className={cn([buttonVariants({ size: 'sm' }), 'max-sm:text-xs'])}
-      >
-        Cập nhật thông tin Shop
-      </Link>
-      <div className="space-y-4">
-        <h1 className="text-lg font-medium">Giới thiệu về Shop</h1>
-        <div dangerouslySetInnerHTML={{ __html: profile.description }} />
-      </div>
     </div>
-  )
-}
+  );
+};
 
-export default Page
+export default Page;

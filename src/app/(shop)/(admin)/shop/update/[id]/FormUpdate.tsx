@@ -1,9 +1,25 @@
-'use client'
+// @ts-nocheck
+"use client";
 
-import Loading from '@/components/Loading'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { z } from "zod";
+import { toast } from "sonner";
+import Image from "next/image";
+import dynamic from "next/dynamic";
+import { Plus } from "lucide-react";
+import { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import http from "@/lib/http";
+import { cn } from "@/lib/utils";
+import Loading from "@/components/Loading";
+import { IShop } from "@/utils/types/shop";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { reFetchShops } from "@/utils/server";
+import { updateProfileShopByAdmin } from "@/utils/actions/shop";
 import {
   Select,
   SelectContent,
@@ -12,170 +28,124 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import CustomUploadAdapter from '@/hooks/CustomUploadAdapter'
-import { cn } from '@/lib/utils'
-import { updateProfileShopByAdmin } from '@/utils/actions/shop'
-import { createUser, updateProfileUserByAdmin } from '@/utils/actions/user'
-import { CKEditor } from '@ckeditor/ckeditor5-react'
-import { zodResolver } from '@hookform/resolvers/zod'
-import Editor from 'ckeditor5-custom-build'
-import { Plus } from 'lucide-react'
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-import { z } from 'zod'
-
-interface IShop {
-  id: string
-  userName: string
-  email: string
-  avatar: string
-  background: string
-  phoneNumber: number
-  money: number
-  isActive: string
-  description: string
-  address: {
-    phoneNumber: string
-    userName: string
-    address: string
-  }
-}
+} from "@/components/ui/select";
+import Link from "next/link";
 
 const shopValidator = z.object({
-  userName: z.string().min(4, { message: 'Tên người dùng tối thiểu 4 ký tự.' }),
-  description: z.string().min(1, { message: 'Bạn chưa thêm mô tả cho Shop.' }),
+  userName: z.string().min(4, { message: "Tên người dùng tối thiểu 4 ký tự." }),
   phoneNumber: z
     .string()
-    .length(10, { message: 'Số điện thoại không đúng định dạng.' }),
-  address: z.object({
-    address: z.string().min(2, { message: 'Địa chỉ không phù hợp.' }),
-    userName: z
-      .string()
-      .min(4, { message: 'Tên người dùng tối thiểu 4 ký tự.' }),
-    phoneNumber: z
-      .string()
-      .length(10, { message: 'Số điện thoại không đúng định dạng.' }),
-  }),
-})
+    .length(10, { message: "Số điện thoại không đúng định dạng." }),
+});
 
-type TUserValidator = z.infer<typeof shopValidator>
+type TUserValidator = z.infer<typeof shopValidator>;
+
+const FroalaEditor = dynamic(
+  () => {
+    return Promise.all([
+      import("react-froala-wysiwyg"),
+      import("froala-editor/css/froala_editor.pkgd.min.css"),
+      import("froala-editor/css/froala_style.min.css"),
+      import("froala-editor/js/plugins/image.min.js"),
+      import("froala-editor/js/plugins.pkgd.min.js"),
+    ]).then(([module]) => module);
+  },
+  {
+    ssr: false,
+  }
+);
+
+const FroalaEditorView = dynamic(
+  () => {
+    return Promise.all([
+      import("react-froala-wysiwyg/FroalaEditorView"),
+      import("froala-editor/css/froala_editor.pkgd.min.css"),
+      import("froala-editor/css/froala_style.min.css"),
+      import("froala-editor/js/plugins/image.min.js"),
+      import("froala-editor/js/plugins.pkgd.min.js"),
+    ]).then(([module]) => module);
+  },
+  {
+    ssr: false,
+  }
+);
 
 const FormUpdate = ({ user }: { user: IShop }) => {
-  const [isLoading, setIsLoading] = useState(false)
-  const [avatar, setAvatar] = useState<string>('')
-  const [background, setBackground] = useState<string>('')
-  const [fileAvatar, setFileAvatar] = useState<any>(null)
-  const [fileBackground, setFileBackground] = useState<any>(null)
-  const avatarUser = useRef<HTMLInputElement>(null)
-  const backgroundUser = useRef<HTMLInputElement>(null)
+  const [isLoading, setIsLoading] = useState(false);
+  const [avatar, setAvatar] = useState<string>("");
+  const [background, setBackground] = useState<string>("");
+  const [description, setDescription] = useState<string>(user.description);
+  const [fileAvatar, setFileAvatar] = useState<any>(null);
+  const [fileBackground, setFileBackground] = useState<any>(null);
+  const avatarUser = useRef<HTMLInputElement>(null);
+  const backgroundUser = useRef<HTMLInputElement>(null);
 
   const onUploadAvatar = () => {
-    avatarUser?.current?.click()
-  }
+    avatarUser?.current?.click();
+  };
 
   const onUploadBackground = () => {
-    backgroundUser?.current?.click()
-  }
+    backgroundUser?.current?.click();
+  };
 
   const handleUploadAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const image = URL.createObjectURL(e.target.files[0])
-      setAvatar(image)
-      setFileAvatar(e.target.files[0])
+      const image = URL.createObjectURL(e.target.files[0]);
+      setAvatar(image);
+      setFileAvatar(e.target.files[0]);
     }
-  }
+  };
   const handleUploadBackground = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const image = URL.createObjectURL(e.target.files[0])
-      setBackground(image)
-      setFileBackground(e.target.files[0])
+      const image = URL.createObjectURL(e.target.files[0]);
+      setBackground(image);
+      setFileBackground(e.target.files[0]);
     }
-  }
+  };
 
-  const router = useRouter()
+  const router = useRouter();
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<TUserValidator>({
     resolver: zodResolver(shopValidator),
-  })
+  });
 
-  const onSubmit = async ({
-    phoneNumber,
-    userName,
-    address,
-    description,
-  }: TUserValidator) => {
-    setIsLoading(true)
-    const form = new FormData()
-    form.append('userName', userName)
-    form.append('phoneNumber', phoneNumber)
-    form.append('addressUpdate', JSON.stringify(address))
-    form.append('description', JSON.stringify(description))
-    if (fileAvatar) form.append('fileAvatar', fileAvatar)
-    if (fileBackground) form.append('fileBackground', fileBackground)
-    const res = await updateProfileShopByAdmin(user.id, form)
-    setIsLoading(false)
-    if (res.error) {
-      return toast.error(res.message)
+  const onSubmit = async ({ phoneNumber, userName }: TUserValidator) => {
+    setIsLoading(true);
+    const form = new FormData();
+    form.append("userName", userName);
+    form.append("phoneNumber", phoneNumber);
+    form.append("description", description);
+    if (fileAvatar) form.append("fileAvatar", fileAvatar);
+    if (fileBackground) form.append("fileBackground", fileBackground);
+    try {
+      await updateProfileShopByAdmin(user.id, form);
+      toast.success("Cập nhật người dùng thành công.");
+      await reFetchShops();
+      router.replace("/shop");
+    } catch (error) {
+      toast.error("Có lỗi xảy ra, vui lòng thử lại sau!");
+    } finally {
+      setIsLoading(false);
     }
-    toast.success('Cập nhật người dùng thành công.')
-    router.replace('/shop')
-  }
+  };
 
   const handleCancelUpdateImage = (type?: string) => {
     if (type) {
-      setAvatar('')
-      setFileAvatar(null)
+      setAvatar("");
+      setFileAvatar(null);
     } else {
-      setBackground('')
-      setFileBackground(null)
+      setBackground("");
+      setFileBackground(null);
     }
-  }
+  };
 
-  const editorConfiguration = {
-    toolbar: [
-      'heading',
-      '|',
-      'bold',
-      'italic',
-      'link',
-      'bulletedList',
-      'numberedList',
-      '|',
-      'outdent',
-      'indent',
-      '|',
-      'imageUpload',
-      'blockQuote',
-      'insertTable',
-      'mediaEmbed',
-      'undo',
-      'redo',
-    ],
-    extraPlugins: [uploadPlugin],
-  }
-
-  function uploadPlugin(editor: any) {
-    editor.plugins.get('FileRepository').createUploadAdapter = (
-      loader: any
-    ) => {
-      return new CustomUploadAdapter(loader)
-    }
-  }
   return (
     <div className="p-4 flex flex-col max-w-7xl w-full mx-auto gap-4">
       <h1 className="text-lg text-gray-700 font-bold">Tạo người dùng mới</h1>
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="space-y-4"
-      >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-2 col-span-2 sm:col-span-1">
             <Label htmlFor="email">Email</Label>
@@ -190,10 +160,10 @@ const FormUpdate = ({ user }: { user: IShop }) => {
             <Label htmlFor="userName">Tên người dùng</Label>
             <Input
               placeholder="Nguyễn Văn A"
-              {...register('userName')}
+              {...register("userName")}
               defaultValue={user.userName}
               className={cn({
-                'focus-visible:ring-red-500': errors.userName,
+                "focus-visible:ring-red-500": errors.userName,
               })}
             />
             {errors?.userName && (
@@ -204,20 +174,16 @@ const FormUpdate = ({ user }: { user: IShop }) => {
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-2 col-span-2 sm:col-span-1">
             <Label htmlFor="password">Mật khẩu</Label>
-            <Input
-              type="password"
-              placeholder="************"
-              disabled
-            />
+            <Input type="password" placeholder="************" disabled />
           </div>
           <div className="flex flex-col gap-2 col-span-2 sm:col-span-1">
             <Label htmlFor="phoneNumber">Số điện thoại</Label>
             <Input
               placeholder="0123456789"
-              {...register('phoneNumber')}
+              {...register("phoneNumber")}
               defaultValue={user.phoneNumber}
               className={cn({
-                'focus-visible:ring-red-500': errors.phoneNumber,
+                "focus-visible:ring-red-500": errors.phoneNumber,
               })}
             />
             {errors?.phoneNumber && (
@@ -230,32 +196,23 @@ const FormUpdate = ({ user }: { user: IShop }) => {
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
             <Label>Trạng thái hoạt động</Label>
-            <Select defaultValue={user.isActive}>
+            <Select value={user.isActive}>
               <SelectTrigger className="w-full">
                 <SelectValue
-                  placeholder="Select a fruit"
+                  placeholder="Trạng thái hoạt động"
                   className="text-xs"
                 />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel className="text-xs">Trạng thái Shop</SelectLabel>
-                  <SelectItem
-                    value="active"
-                    className="text-xs"
-                  >
+                  <SelectItem value="active" className="text-xs">
                     Hoạt động
                   </SelectItem>
-                  <SelectItem
-                    value="unactive"
-                    className="text-xs"
-                  >
+                  <SelectItem value="unactive" className="text-xs">
                     Ngừng hoạt động
                   </SelectItem>
-                  <SelectItem
-                    value="band"
-                    className="text-xs"
-                  >
+                  <SelectItem value="band" className="text-xs">
                     Cấm hoạt động
                   </SelectItem>
                 </SelectGroup>
@@ -264,65 +221,7 @@ const FormUpdate = ({ user }: { user: IShop }) => {
           </div>
           <div className="flex flex-col gap-2">
             <Label>Tài khoản</Label>
-            <Input
-              type="number"
-              value={user.money}
-              disabled
-            />
-          </div>
-        </div>
-        <h1 className="font-medium">Địa chỉ bán hàng</h1>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-2 col-span-2 sm:col-span-1">
-            <Label htmlFor="address-detail">Địa chỉ</Label>
-            <Input
-              type="text"
-              {...register('address.address')}
-              defaultValue={user.address?.address}
-              id="address-detail"
-              className={cn({
-                'focus-visible:ring-red-500': errors.address?.address,
-              })}
-            />
-            {errors?.address?.address && (
-              <p className="text-sm text-red-500">
-                {errors.address?.address.message}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-2 col-span-2 sm:col-span-1">
-            <Label htmlFor="address.phoneNumber">Số điện thoại</Label>
-            <Input
-              placeholder="0123456789"
-              {...register('address.phoneNumber')}
-              defaultValue={user.address?.phoneNumber}
-              id="address.phoneNumber"
-              className={cn({
-                'focus-visible:ring-red-500': errors.address?.phoneNumber,
-              })}
-            />
-            {errors?.address?.phoneNumber && (
-              <p className="text-sm text-red-500">
-                {errors.address.phoneNumber.message}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col gap-2 col-span-2 sm:col-span-1">
-            <Label htmlFor="address.userName">Tên người bán</Label>
-            <Input
-              placeholder="Nguyễn Văn A"
-              id="address.userName"
-              defaultValue={user.address?.userName}
-              {...register('address.userName')}
-              className={cn({
-                'focus-visible:ring-red-500': errors.address?.userName,
-              })}
-            />
-            {errors?.address?.userName && (
-              <p className="text-sm text-red-500">
-                {errors.address.userName.message}
-              </p>
-            )}
+            <Input type="number" value={user.money || 0} disabled />
           </div>
         </div>
         <div className="flex flex-col gap-4">
@@ -340,7 +239,7 @@ const FormUpdate = ({ user }: { user: IShop }) => {
             >
               <Image
                 alt="avatar user"
-                src={avatar || user.avatar}
+                src={avatar || user.avatar || "/login.png"}
                 fill
                 className="lg:w-64 md:w-52 md:h-52 w-40 hover:opacity-90 rounded-full lg:h-64 h-40 cursor-pointer text-blue-300 bg-gray-50 hover:bg-background hover:text-blue-500 shadow-lg relative"
               />
@@ -350,8 +249,8 @@ const FormUpdate = ({ user }: { user: IShop }) => {
               <Button onClick={onUploadAvatar}>Thay ảnh</Button>
               {avatar ? (
                 <Button
-                  variant={'destructive'}
-                  onClick={() => handleCancelUpdateImage('avatar')}
+                  variant={"destructive"}
+                  onClick={() => handleCancelUpdateImage("avatar")}
                 >
                   Hủy
                 </Button>
@@ -374,7 +273,7 @@ const FormUpdate = ({ user }: { user: IShop }) => {
             >
               <Image
                 alt="avatar user"
-                src={background || user.background}
+                src={background || user.background || "/login.png"}
                 fill
                 className="lg:w-72 md:w-64 md:h-48 w-52 lg:h-56 h-40 cursor-pointer text-blue-300 bg-gray-50 hover:bg-background hover:text-blue-500 rounded-md shadow-lg relative"
               />
@@ -384,7 +283,7 @@ const FormUpdate = ({ user }: { user: IShop }) => {
               <Button onClick={onUploadBackground}>Thay ảnh</Button>
               {background ? (
                 <Button
-                  variant={'destructive'}
+                  variant={"destructive"}
                   onClick={() => handleCancelUpdateImage()}
                 >
                   Hủy
@@ -395,33 +294,65 @@ const FormUpdate = ({ user }: { user: IShop }) => {
         </div>
         <div className="flex flex-col gap-4 py-4">
           <h1 className="text-lg font-medium">Giới thiệu về Shop</h1>
-          <CKEditor
-            editor={Editor}
-            config={editorConfiguration}
-            onReady={() => {
-              register('description')
+          <FroalaEditor
+            tag="textarea"
+            model={description}
+            config={{
+              imageUploadURL: "/api/upload",
+              imageUploadParams: {
+                key: "value",
+              },
+              imageUploadMethod: "POST",
+              imageAllowedTypes: ["jpeg", "jpg", "png", "gif"],
+              imageMaxSize: 10 * 1024 * 1024, // 10MB
+              events: {
+                "image.beforeUpload": function (images: FileList) {
+                  const data = new FormData();
+                  data.append("file", images[0]);
+                  http
+                    .post("/upload-file", data, {
+                      token: true,
+                    })
+                    .then((res: any) => {
+                      this?.image?.insert(
+                        res.payload.secure_url,
+                        null,
+                        null,
+                        this?.image?.get()
+                      );
+                    })
+                    .catch((err) => {
+                      console.log(err);
+                    });
+                  return false;
+                },
+              },
             }}
-            data={user.description}
-            onChange={(event, editor) => {
-              const data = editor.getData()
-              setValue('description', data)
-            }}
+            onModelChange={setDescription}
           />
-          {errors?.description && (
-            <p className="text-sm text-red-500">{errors.description.message}</p>
-          )}
+          <FroalaEditorView model={description} />
         </div>
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="flex items-center gap-2"
-        >
-          {isLoading ? <Loading /> : null}
-          Cập nhật
-        </Button>
+        <div className="flex items-center justify-end gap-4">
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="flex items-center gap-2"
+          >
+            Cập nhật
+          </Button>
+          <Link
+            href={"/shop"}
+            type="submit"
+            disabled={isLoading}
+            className={cn(buttonVariants({ variant: "destructive" }))}
+          >
+            Hủy
+          </Link>
+        </div>
       </form>
+      {isLoading ? <Loading /> : null}
     </div>
-  )
-}
+  );
+};
 
-export default FormUpdate
+export default FormUpdate;

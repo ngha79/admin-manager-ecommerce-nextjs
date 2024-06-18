@@ -1,25 +1,22 @@
-export default class CustomUploadAdapter {
-  constructor(loader) {
-    this.loader = loader
-  }
+import http from "@/lib/http";
 
-  upload = () => {
-    return this.loader.file.then(
-      (file) =>
-        new Promise(async (resolve, reject) => {
-          const formData = new FormData()
-          formData.append('file', file)
-          try {
-            const response = await fetch(`http://localhost:8000/upload-file`, {
-              method: 'POST',
-              body: formData,
+export default function uploadAdapter(loader) {
+  return {
+    upload: () => {
+      return new Promise((resolve, reject) => {
+        loader.file.then(async (file) => {
+          const body = new FormData();
+          body.append("file", file);
+          http
+            .post("/upload-file", body)
+            .then((file) => {
+              resolve({ default: file.payload.secure_url });
             })
-            const image = await response.json()
-            resolve({ default: image.secure_url })
-          } catch (error) {
-            reject(err)
-          }
-        })
-    )
-  }
+            .catch((error) => {
+              reject(error);
+            });
+        });
+      });
+    },
+  };
 }

@@ -1,6 +1,11 @@
-'use client'
+"use client";
 
-import { Button } from '@/components/ui/button'
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import React, { useTransition } from "react";
+
 import {
   Card,
   CardHeader,
@@ -8,50 +13,51 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
+} from "@/components/ui/card";
 import {
   IPasswordUserValidator,
   PasswordUserValidator,
-} from '@/lib/validators/account-credentials-validator'
-import { logout } from '@/utils/actions/account'
-import { changePasswordShop } from '@/utils/actions/shop'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import React, { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
+} from "@/lib/validators/account-credentials-validator";
+import { HttpError } from "@/lib/http";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { logout } from "@/utils/actions/account";
+import { cn, ResponseExceptions } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { changePasswordShop } from "@/utils/actions/shop";
 
 const ChangePassword = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(false)
-  const router = useRouter()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<IPasswordUserValidator>({
     resolver: zodResolver(PasswordUserValidator),
-  })
-  const handleLogout = async () => {
-    await logout()
-  }
+  });
 
   const onSubmit = async ({
     currentPassword,
     newPassword,
   }: IPasswordUserValidator) => {
-    setIsLoading(true)
-    const res = await changePasswordShop({ currentPassword, newPassword })
-    setIsLoading(false)
-    if (res.error) {
-      return toast.error(res.message)
-    }
-    handleLogout()
-    return toast.success('Cập nhật thông tin thành công')
-  }
+    startTransition(async () => {
+      try {
+        await changePasswordShop({ currentPassword, newPassword });
+        toast.success("Cập nhật thông tin thành công");
+        await logout();
+        router.push("/login");
+      } catch (error: any) {
+        if (error instanceof HttpError) {
+          toast.error(error.payload.message);
+        } else {
+          toast.error(ResponseExceptions.DEFAULT_ERROR);
+        }
+      }
+    });
+  };
   return (
     <Card>
       <CardHeader>
@@ -66,9 +72,9 @@ const ChangePassword = () => {
           <Input
             id="currentPassword"
             type="password"
-            {...register('currentPassword')}
+            {...register("currentPassword")}
             className={cn({
-              'focus-visible:ring-red-500': errors.currentPassword,
+              "focus-visible:ring-red-500": errors.currentPassword,
             })}
           />
           {errors?.currentPassword && (
@@ -82,9 +88,9 @@ const ChangePassword = () => {
           <Input
             id="newPassword"
             type="password"
-            {...register('newPassword')}
+            {...register("newPassword")}
             className={cn({
-              'focus-visible:ring-red-500': errors.newPassword,
+              "focus-visible:ring-red-500": errors.newPassword,
             })}
           />
           {errors?.newPassword && (
@@ -93,16 +99,13 @@ const ChangePassword = () => {
         </div>
       </CardContent>
       <CardFooter>
-        <Button
-          disabled={isLoading}
-          onClick={handleSubmit(onSubmit)}
-        >
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button disabled={isPending} onClick={handleSubmit(onSubmit)}>
+          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Lưu mật khẩu
         </Button>
       </CardFooter>
     </Card>
-  )
-}
+  );
+};
 
-export default ChangePassword
+export default ChangePassword;

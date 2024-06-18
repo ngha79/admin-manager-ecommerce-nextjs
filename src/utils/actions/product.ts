@@ -1,176 +1,80 @@
-'use server'
-
-import { BrandProduct } from '@/lib/interface'
-import { getSession } from './account'
+import { BrandProduct } from "@/lib/interface";
+import { getUserId } from "./account";
+import http from "@/lib/http";
+import { IResponsePagination } from "../types/response-pagination";
+import { IProduct } from "../types/product";
 
 export async function createProduct(formData: any) {
-  try {
-    const session = await getSession()
-    const res = await fetch('http://localhost:8000/product/', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-    })
-    const account = await res.json()
-    if (!res.ok) throw account
-    return account
-  } catch (error: any) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1234 }
-  }
+  return await http.post("/product/", formData, {
+    token: true,
+  });
 }
 
 export const getListProduct = async ({
   page = 1,
   limit = 10,
-  search = '',
+  search = "",
   brand,
   order,
   publish,
   searchBy,
+  shopId,
 }: {
-  page: number
-  limit: number
-  search: string
-  brand?: BrandProduct
-  publish?: boolean
-  order?: 'ASC' | 'DESC'
-  searchBy?: 'ctime' | 'price' | 'sales'
+  page: number;
+  limit: number;
+  search: string;
+  brand?: BrandProduct;
+  publish?: boolean;
+  shopId?: string;
+  order?: "ASC" | "DESC";
+  searchBy?: "ctime" | "price" | "sales";
 }) => {
-  try {
-    let url = ''
-    const session = await getSession()
-    if (brand) url = url.concat(`&brand=${brand}`)
-    if (searchBy) url = url.concat(`&searchBy=${searchBy}`)
-    if (order) url = url.concat(`&order=${order}`)
-    if (publish) url = url.concat(`&publish=${publish}`)
-    const res = await fetch(
-      `http://localhost:8000/product/shop/list?page=${page}&shopId=${session.userId}&limit=${limit}&search=${search}` +
-        url,
-      {
-        method: 'GET',
-        headers: {
-          userid: session.userId,
-          Authorization: `Bearer ${session.accessToken}`,
-          'Content-type': 'application/json',
-        },
-        cache: 'no-cache',
-      }
-    )
-    const products = await res.json()
-    if (!res.ok) throw products
-    return products
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1101 }
-  }
-}
+  let url = "";
+  if (brand) url = url.concat(`&brand=${brand}`);
+  if (searchBy) url = url.concat(`&searchBy=${searchBy}`);
+  if (order) url = url.concat(`&order=${order}`);
+  if (publish) url = url.concat(`&publish=${publish}`);
+  return await http.get<IResponsePagination>(
+    `/product/shop/list?page=${page}&limit=${limit}&search=${search}&shopId=${shopId}` +
+      url,
+    {
+      next: {
+        tags: ["products"],
+      },
+    }
+  );
+};
 
 export const deleteProduct = async ({ productId }: { productId: string }) => {
-  try {
-    const session = await getSession()
-
-    const res = await fetch(`http://localhost:8000/product/${productId}`, {
-      method: 'DELETE',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-        'Content-type': 'application/json',
-      },
-      cache: 'no-cache',
-    })
-    const products = await res.json()
-    if (!res.ok) throw products
-    return products
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1101 }
-  }
-}
+  return await http.delete(
+    `/product/${productId}`,
+    {},
+    {
+      token: true,
+    }
+  );
+};
 
 export const publishProducts = async (data: { productIds: string[] }) => {
-  try {
-    const session = await getSession()
-    const res = await fetch('http://localhost:8000/product/publish', {
-      method: 'PATCH',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-        'Content-type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    })
-    const products = await res.json()
-    if (!res.ok) throw products
-    return products
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1101 }
-  }
-}
+  return await http.patch("/product/publish", data, {
+    token: true,
+  });
+};
 
 export const unpublishProducts = async (data: { productIds: string[] }) => {
-  try {
-    const session = await getSession()
-
-    const res = await fetch('http://localhost:8000/product/unpublish', {
-      method: 'PATCH',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-        'Content-type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    })
-    const products = await res.json()
-    if (!res.ok) throw products
-    return products
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1101 }
-  }
-}
+  return await http.patch("/product/unpublish", data, {
+    token: true,
+  });
+};
 
 export const getProductById = async (productId: string) => {
-  try {
-    const session = await getSession()
-
-    const res = await fetch(`http://localhost:8000/product/info/${productId}`, {
-      method: 'GET',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-        'Content-type': 'application/json',
-      },
-      cache: 'no-cache',
-    })
-    const product = await res.json()
-    if (!res.ok) throw product
-    return product
-  } catch (error) {
-    return {
-      message: 'Có lỗi xảy ra vui lòng thử lại sau.',
-      error: error.statusCode,
-    }
-  }
-}
+  return await http.get<IProduct>(`/product/info/${productId}`, {
+    cache: "no-cache",
+  });
+};
 
 export const updateProduct = async (productId: string, data: any) => {
-  try {
-    const session = await getSession()
-    const res = await fetch(`http://localhost:8000/product/${productId}`, {
-      method: 'PUT',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: data,
-    })
-    const product = await res.json()
-    if (!res.ok) throw product
-    return product
-  } catch (error) {
-    return {
-      message: 'Có lỗi xảy ra vui lòng thử lại sau.',
-      error: error.statusCode,
-    }
-  }
-}
+  await http.put(`/product/${productId}`, data, {
+    token: true,
+  });
+};

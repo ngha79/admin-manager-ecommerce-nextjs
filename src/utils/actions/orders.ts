@@ -1,6 +1,5 @@
-'use server'
-
-import { getSession } from './account'
+import http from "@/lib/http";
+import { IResponsePagination } from "../types/response-pagination";
 
 export const getListOrders = async ({
   page,
@@ -8,77 +7,42 @@ export const getListOrders = async ({
   search,
   status,
 }: {
-  page: number
-  limit: number
-  search: string
-  status: string
+  page: number;
+  limit: number;
+  search: string;
+  status: string;
 }) => {
-  try {
-    const session = await getSession()
-    let url = ''
-    if (search) url += `&search=${search}`
-    if (status) url += `&status=${status}`
-    const response = await fetch(
-      `http://localhost:8000/list-orders/shop-list?page=${page}&limit=${limit}&shopId=${session.userId}` +
-        url,
-      {
-        method: 'GET',
-        headers: {
-          userid: session.userId,
-          Authorization: `Bearer ${session.accessToken}`,
-          'Content-type': 'application/json',
-        },
-      }
-    )
-    const listOrders = await response.json()
-    if (!response.ok) throw listOrders
-    return listOrders
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1012 }
-  }
-}
+  let url = "";
+  if (search) url += `&search=${search}`;
+  if (status) url += `&status=${status}`;
+  return await http.get<IResponsePagination>(
+    `/list-orders/shop-list?page=${page}&limit=${limit}&shopId=` + url,
+    {
+      token: true,
+      next: {
+        tags: ["orders"],
+      },
+    }
+  );
+};
 
 export const updateOrder = async ({
   id,
   status,
 }: {
-  id: string
-  status: string
+  id: string;
+  status: string;
 }) => {
-  try {
-    const session = await getSession()
-    const response = await fetch(`http://localhost:8000/list-orders/${id}`, {
-      method: 'PUT',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-        'Content-type': 'application/json',
-      },
-      body: JSON.stringify({ status }),
-    })
-    const update = await response.json()
-    if (!response.ok) throw update
-    return update
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1012 }
-  }
-}
+  const response = await http.put<any>(
+    `/list-orders/${id}`,
+    { status },
+    {
+      token: true,
+    }
+  );
+  return response;
+};
 
 export const getOrderById = async ({ id }: { id: string }) => {
-  try {
-    const session = await getSession()
-    const response = await fetch(`http://localhost:8000/list-orders/${id}`, {
-      method: 'GET',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-        'Content-type': 'application/json',
-      },
-    })
-    const order = await response.json()
-    if (!response.ok) throw order
-    return order
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1012 }
-  }
-}
+  return await http.get<any>(`/list-orders/${id}`, {});
+};

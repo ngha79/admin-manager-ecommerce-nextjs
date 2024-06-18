@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import * as React from 'react'
+import * as React from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -12,10 +12,10 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from '@tanstack/react-table'
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
+} from "@tanstack/react-table";
+import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus } from "lucide-react";
 
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -24,22 +24,23 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import Image from 'next/image'
+} from "@/components/ui/table";
+import Image from "next/image";
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Input } from '@/components/ui/input'
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
 
-import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -48,47 +49,54 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { deleteShop, updateStatusShop } from '@/utils/actions/shop'
-import useDebounce from '@/hooks/useDebounce'
-import Link from 'next/link'
+} from "@/components/ui/select";
+import { deleteShop, updateStatusShop } from "@/utils/actions/shop";
+import useDebounce from "@/hooks/useDebounce";
+import Link from "next/link";
+import { HttpError } from "@/lib/http";
+import { reFetchShops } from "@/utils/server";
 
 export enum StatusShop {
-  ACTIVE = 'active',
-  BAND = 'band',
-  UNACTIVE = 'unactive',
+  ACTIVE = "active",
+  BAND = "band",
+  UNACTIVE = "unactive",
 }
 
 export type IShop = {
-  id: string
-  userName: string
-  email: string
-  phoneNumber: string
-  money: number
-  avatar: string
-  background: string
-  address: IAddressShop[]
-  followers: any[]
-  isActive: StatusShop
-}
+  id: string;
+  userName: string;
+  email: string;
+  phoneNumber: string;
+  money: number;
+  avatar: string;
+  background: string;
+  address: IAddressShop[];
+  followers: any[];
+  isActive: StatusShop;
+  description: string;
+};
 
 export type IAddressShop = {
-  id: string
-  address: string
-  isAddressDefault: boolean
-  phoneNumber: string
-  userName: string
+  id: string;
+  address: string;
+  isAddressDefault: boolean;
+  phoneNumber: string;
+  userName: string;
+};
+
+interface TypeColumnInterface {
+  [key: string]: string;
 }
 
-export const TypeColumn = {
-  userName: 'Tên cửa hàng',
-  avatar: 'Avatar',
-  email: 'Email',
-  phoneNumber: 'Số điện thoại',
-  money: 'Tổng tiền',
-  followers: 'Người theo dõi',
-  isActive: 'Trạng thái Shop',
-}
+export const TypeColumn: TypeColumnInterface = {
+  userName: "Tên cửa hàng",
+  avatar: "Avatar",
+  email: "Email",
+  phoneNumber: "Số điện thoại",
+  money: "Tổng tiền",
+  followers: "Người theo dõi",
+  isActive: "Trạng thái Shop",
+};
 
 export default function DataShops({
   shops,
@@ -98,142 +106,119 @@ export default function DataShops({
   order,
   searchShop,
 }: {
-  shops: IShop[]
-  prevPage: number | null
-  nextPage: number | null
-  lastPage: number
-  order: string
-  searchShop: string
+  shops: IShop[];
+  prevPage: number | null;
+  nextPage: number | null;
+  lastPage: number;
+  order: string;
+  searchShop: string;
 }) {
-  const [search, setSearch] = React.useState<string>('')
+  const [search, setSearch] = React.useState<string>("");
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
-  )
+  );
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
+    React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
 
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  let page = Number(searchParams.get('page')) || 1
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  let page = Number(searchParams.get("page")) || 1;
 
-  const searchDebounce = useDebounce(search, 500)
+  const searchDebounce = useDebounce(search, 500);
 
   const columns: ColumnDef<IShop>[] = [
     {
-      accessorKey: 'userName',
-      header: 'Tên cửa hàng',
+      accessorKey: "userName",
+      header: "Tên cửa hàng",
       cell: ({ row }) => {
         return (
           <div className="capitalize w-28 line-clamp-2">
-            {row.getValue('userName')}
+            {row.getValue("userName")}
           </div>
-        )
+        );
       },
     },
     {
-      accessorKey: 'avatar',
-      header: 'Avatar',
+      accessorKey: "avatar",
+      header: "Avatar",
       cell: ({ row }) => {
-        const avatar = row.getValue('avatar')
+        const avatar = row.getValue("avatar") as string;
         return (
           <div className="flex items-center justify-center">
             <div className="md:w-24 md:h-24 w-20 hover:opacity-90 rounded-full h-20 cursor-pointer text-blue-300 bg-gray-50 hover:bg-background hover:text-blue-500 shadow-lg relative">
               <Image
                 alt="avatar user"
-                src={avatar || '/oval.svg'}
+                src={avatar || "/login.png"}
                 fill
                 className="md:w-24 md:h-24 w-20 hover:opacity-90 rounded-full h-20 cursor-pointer text-blue-300 bg-gray-50 hover:bg-background hover:text-blue-500 shadow-lg relative"
               />
             </div>
           </div>
-        )
+        );
       },
     },
     {
-      accessorKey: 'email',
-      header: 'Email',
-      cell: ({ row }) => <div>{row.getValue('email')}</div>,
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ row }) => <div>{row.getValue("email")}</div>,
     },
     {
-      accessorKey: 'phoneNumber',
-      header: 'Số điện thoại',
-      cell: ({ row }) => <div>{row.getValue('phoneNumber')}</div>,
+      accessorKey: "phoneNumber",
+      header: "Số điện thoại",
+      cell: ({ row }) => <div>{row.getValue("phoneNumber")}</div>,
     },
     {
-      accessorKey: 'money',
-      header: 'Tổng tiền',
+      accessorKey: "followers",
+      header: "Người theo dõi",
       cell: ({ row }) => {
-        const money = parseInt(row.getValue('money')) || 0
-        return <div className="text-center">{money}</div>
+        const followers = parseInt(row.getValue("followers")) || 0;
+        return <div className="text-center">{followers}</div>;
       },
     },
     {
-      accessorKey: 'followers',
-      header: 'Người theo dõi',
+      accessorKey: "isActive",
+      header: "Trạng thái Shop",
       cell: ({ row }) => {
-        const followers = parseInt(row.getValue('followers')) || 0
-        return <div className="text-center">{followers}</div>
-      },
-    },
-    {
-      accessorKey: 'isActive',
-      header: 'Trạng thái Shop',
-      cell: ({ row }) => {
-        const isActive: string = row.getValue('isActive') || 'unactive'
-        const shop = row.original
+        const isActive: string = row.getValue("isActive") || "unactive";
+        const shop = row.original;
         return (
           <Select
             defaultValue={isActive}
             onValueChange={(value) => handleUpdateStatusShop(value, shop.id)}
           >
             <SelectTrigger className="w-28 text-xs">
-              <SelectValue
-                placeholder="Select a fruit"
-                className="text-xs"
-              />
+              <SelectValue placeholder="Select a fruit" className="text-xs" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 <SelectLabel className="text-xs">Trạng thái Shop</SelectLabel>
-                <SelectItem
-                  value="active"
-                  className="text-xs"
-                >
+                <SelectItem value="active" className="text-xs">
                   Hoạt động
                 </SelectItem>
-                <SelectItem
-                  value="unactive"
-                  className="text-xs"
-                >
+                <SelectItem value="unactive" className="text-xs">
                   Ngừng hoạt động
                 </SelectItem>
-                <SelectItem
-                  value="band"
-                  className="text-xs"
-                >
+                <SelectItem value="band" className="text-xs">
                   Cấm hoạt động
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
-        )
+        );
       },
     },
     {
-      id: 'actions',
-      header: 'Thao tác',
+      id: "actions",
+      header: "Thao tác",
       enableHiding: false,
       cell: ({ row }) => {
-        const user = row.original
+        const user = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0"
-              >
+              <Button variant="ghost" className="h-8 w-8 p-0">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -261,10 +246,10 @@ export default function DataShops({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-  ]
+  ];
   const table = useReactTable({
     data: shops,
     columns,
@@ -280,56 +265,73 @@ export default function DataShops({
       columnVisibility,
       rowSelection,
     },
-  })
+  });
   const handleDeleteShop = async (userId: string) => {
-    const res = await deleteShop(userId)
-    if (res.error) return toast.error(res.message)
-    router.refresh()
-    toast.success('Xóa Shop thành công')
-  }
+    try {
+      await deleteShop(userId);
+      await reFetchShops();
+      toast.success("Xóa Shop thành công");
+    } catch (error: any) {
+      if (error instanceof HttpError) {
+        toast.error(error.payload.message);
+      } else {
+        toast.error(error.message);
+      }
+    }
+  };
 
   const handleUpdateStatusShop = async (value: string, shopId: string) => {
-    const response = await updateStatusShop({ status: value, shopId })
-    if (response.error) return toast.error(response.message)
-    toast.success('Cập nhật trạng thái Shop thành công')
-  }
-  const handleOnSearch = (e) => {
-    setSearch(e.target.value)
-  }
+    try {
+      await updateStatusShop({ status: value, shopId });
+      await reFetchShops();
+      toast.success("Cập nhật trạng thái Shop thành công");
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return toast.error(error.payload.message);
+      }
+      toast.error("Có lỗi xảy ra, vui lòng thử lại sau!");
+    }
+  };
+  const handleOnSearch = (e: {
+    target: { value: React.SetStateAction<string> };
+  }) => {
+    setSearch(e.target.value);
+  };
 
   const handleSetNextPage = (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams)
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
     if (page < lastPage) {
-      params.set('page', `${page + 1}`)
-      router.replace(`${pathname}?${params.toString()}`)
+      params.set("page", `${page + 1}`);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }
+  };
   const handleSetPrevPage = (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams)
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
     if (page > 1) {
-      params.set('page', `${page - 1}`)
-      router.replace(`${pathname}?${params.toString()}`)
+      params.set("page", `${page - 1}`);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }
+  };
 
   const handleSortBy = (sort: string) => {
-    const params = new URLSearchParams(searchParams)
+    const params = new URLSearchParams(searchParams);
     if (sort) {
-      params.set('order', sort)
-      router.replace(`${pathname}?${params.toString()}`)
+      params.set("order", sort);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }
+  };
 
   React.useEffect(() => {
-    const params = new URLSearchParams(searchParams)
-    params.set('search', searchDebounce)
-    router.replace(`${pathname}?${params.toString()}`)
-  }, [searchDebounce])
+    const params = new URLSearchParams(searchParams);
+    params.set("search", searchDebounce);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [searchDebounce, handleOnSearch]);
 
   return (
-    <div className="w-full bg-background p-4 rounded-md">
+    <div className="w-full bg-background p-4 rounded-md shadow-md space-y-4">
+      <h1 className="font-bold text-xl">Quản lý Shop bán hàng</h1>
       <div className="flex md:items-center flex-col md:flex-row py-4 gap-4">
         <Input
           placeholder="Tìm người dùng..."
@@ -343,10 +345,7 @@ export default function DataShops({
             defaultValue={order}
           >
             <SelectTrigger className="w-32 text-xs">
-              <SelectValue
-                placeholder="Sắp xếp theo"
-                className="text-xs"
-              />
+              <SelectValue placeholder="Sắp xếp theo" className="text-xs" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
@@ -362,7 +361,7 @@ export default function DataShops({
                       >
                         {TypeColumn[column.id]}
                       </SelectItem>
-                    )
+                    );
                   })}
               </SelectGroup>
             </SelectContent>
@@ -371,10 +370,7 @@ export default function DataShops({
         <div className="flex md:justify-end gap-4 w-full">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="ml-auto"
-              >
+              <Button variant="outline" className="ml-auto">
                 Columns <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -394,13 +390,13 @@ export default function DataShops({
                     >
                       {TypeColumn[column.id]}
                     </DropdownMenuCheckboxItem>
-                  )
+                  );
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
           <Link
             href={`/shop/create`}
-            className={cn([buttonVariants(), 'flex items-center gap-2'])}
+            className={cn([buttonVariants(), "flex items-center gap-2"])}
           >
             <Plus size={18} />
             Thêm người dùng
@@ -422,7 +418,7 @@ export default function DataShops({
                             header.getContext()
                           )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -432,7 +428,7 @@ export default function DataShops({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
+                  data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -459,11 +455,7 @@ export default function DataShops({
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} trên {shops.length}{' '}
-          cột được chọn.
-        </div>
-        <div className="flex-1 text-sm text-muted-foreground">
-          Trang {page} trên tổng {lastPage} trang.
+          Trang {page} trên tổng {lastPage + 1} trang.
         </div>
         <div className="space-x-2">
           <Button
@@ -485,5 +477,5 @@ export default function DataShops({
         </div>
       </div>
     </div>
-  )
+  );
 }

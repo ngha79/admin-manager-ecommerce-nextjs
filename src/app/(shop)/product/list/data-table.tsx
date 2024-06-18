@@ -1,10 +1,14 @@
-'use client'
+"use client";
 
-import * as React from 'react'
+import * as React from "react";
+import { toast } from "sonner";
+import Image from "next/image";
+import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
 import {
   ColumnDef,
   ColumnFiltersState,
-  SortingState,
   VisibilityState,
   flexRender,
   getCoreRowModel,
@@ -12,11 +16,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from '@tanstack/react-table'
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+} from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,7 +26,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -33,8 +34,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import Image from 'next/image'
+} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -43,192 +43,191 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Input } from '@/components/ui/input'
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import {
   deleteProduct,
   publishProducts,
   unpublishProducts,
-} from '@/utils/actions/product'
-import { toast } from 'sonner'
+} from "@/utils/actions/product";
+import { HttpError } from "@/lib/http";
+import { ResponseExceptions } from "@/lib/utils";
+import { reFetchProducts } from "@/utils/server";
+import useDebounce from "@/hooks/useDebounce";
 
 export type Product = {
-  id: string
-  name: string
-  brand: string
-  sold: number
-  price: number
-  isPublish: boolean
-  picture: ProductImage[]
-}
+  id: string;
+  name: string;
+  brand: string;
+  sold: number;
+  price: number;
+  isPublish: boolean;
+  picture: ProductImage[];
+};
 
 export type ProductImage = {
-  id: number
-  image_id: string
-  product_thumb: string
-  product_image_url: string
-}
+  id: number;
+  image_id: string;
+  product_thumb: string;
+  product_image_url: string;
+};
 
 export type Iventory = {
-  id: string
-  image_id: string
-  product_thumb: string
-  product_image_url: string
+  id: string;
+  image_id: string;
+  product_thumb: string;
+  product_image_url: string;
+};
+
+interface TypeColumnInterface {
+  name: string;
+  brand: string;
+  price: string;
+  sold: string;
+  isPublish: string;
+
+  [key: string]: string;
 }
 
-export const TypeColumn = {
-  name: 'Tên sản phẩm',
-  brand: 'Danh mục',
-  price: 'Giá sản phẩm',
-  sold: 'Đã bán',
-  isPublish: 'Trạng thái',
-}
+export const TypeColumn: TypeColumnInterface = {
+  name: "Tên sản phẩm",
+  brand: "Danh mục",
+  price: "Giá sản phẩm",
+  sold: "Đã bán",
+  isPublish: "Trạng thái",
+};
 
 export default function DataTableDemo({
   products,
   prevPage,
   nextPage,
   lastPage,
+  search,
 }: {
-  products: Product[]
-  prevPage: number | null
-  nextPage: number | null
-  lastPage: number
+  products: Product[];
+  prevPage: number | null;
+  nextPage: number | null;
+  lastPage: number;
+  search: string;
 }) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [searchProducts, setSearch] = React.useState<string>("");
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
-  )
+  );
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [listProducts, setListProducts] = React.useState<Product[]>(products)
+    React.useState<VisibilityState>({});
+
+  let page = Number(searchParams.get("page")) || 1;
+  const searchDebounce = useDebounce(searchProducts, 500);
+
   const handleDeleteProduct = async (productId: string) => {
-    const res = await deleteProduct({ productId })
-    if (res.error) return toast.error(res.message)
-    setListProducts(listProducts.filter((item) => item.id !== productId))
-  }
+    try {
+      await deleteProduct({ productId });
+      await reFetchProducts();
+      toast.success("Xóa sản phẩm thành công.");
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return toast.error(error.payload.message);
+      }
+      toast.error(ResponseExceptions.DEFAULT_ERROR);
+    }
+  };
 
   const handlePublishProduct = async (value: string, productId: string) => {
-    if (value === 'publish') {
-      const res = await publishProducts({ productIds: [productId] })
-      if (res.error) return toast.error(res.message)
-    } else {
-      const res = await unpublishProducts({ productIds: [productId] })
-      if (res.error) return toast.error(res.message)
-    }
-    toast.success('Cập nhật sản phẩm thành công.')
-    const newList = listProducts?.map((product) => {
-      if (product.id === productId) {
-        product.isPublish = value === 'publish' ? true : false
+    try {
+      if (value === "publish") {
+        await publishProducts({ productIds: [productId] });
+      } else {
+        await unpublishProducts({ productIds: [productId] });
       }
-      return product
-    })
-    setListProducts(newList)
-  }
+      await reFetchProducts();
+      toast.success("Cập nhật sản phẩm thành công.");
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return toast.error(error.payload.message);
+      }
+      toast.error(ResponseExceptions.DEFAULT_ERROR);
+    }
+  };
 
   const columns: ColumnDef<Product>[] = [
     {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && 'indeterminate')
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: 'name',
-      header: 'Tên sản phẩm',
+      accessorKey: "name",
+      header: "Tên sản phẩm",
       cell: ({ row }) => {
-        const images: ProductImage = row.original.picture[0]
-        // Format the amount as a dollar amount
+        const images: ProductImage = row.original.picture[0];
         return (
-          <div className="flex gap-2 flex-col">
-            <div className="flex items-center justify-center border">
-              <Image
-                alt="product thumb"
-                src={images?.product_thumb}
-                width={120}
-                height={120}
-                className="w-auto h-auto max-h-32 max-w-40"
-              />
-            </div>
+          <div className="flex items-center justify-start gap-2">
+            <Image
+              alt="product thumb"
+              src={images?.product_thumb}
+              width={64}
+              height={64}
+              className="w-16 h-16 rounded-sm"
+            />
             <div className="capitalize w-28 line-clamp-2">
-              {row.getValue('name')}
+              {row.getValue("name")}
             </div>
           </div>
-        )
+        );
       },
     },
 
     {
-      accessorKey: 'brand',
-      header: 'Danh mục',
-      cell: ({ row }) => <div>{row.getValue('brand')}</div>,
+      accessorKey: "brand",
+      header: "Danh mục",
+      cell: ({ row }) => <div>{row.getValue("brand")}</div>,
     },
     {
-      accessorKey: 'price',
+      accessorKey: "price",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Giá sản phẩm
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        )
+        );
       },
       cell: ({ row }) => {
-        const price = parseFloat(row.getValue('price'))
-        // Format the amount as a dollar amount
-        const formatted = new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(price)
+        const price = parseFloat(row.getValue("price"));
+        const formatted = new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(price);
 
-        return <div className="text-center font-medium">{formatted}</div>
+        return <div className="text-center font-medium">{formatted}</div>;
       },
     },
     {
-      accessorKey: 'sold',
+      accessorKey: "sold",
       header: ({ column }) => {
         return (
           <Button
             variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Đã bán
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
-        )
+        );
       },
       cell: ({ row }) => {
-        const sold = parseInt(row.getValue('sold')) || 0
-        return <div className="text-center">{sold}</div>
+        const sold = parseInt(row.getValue("sold")) || 0;
+        return <div className="text-center">{sold}</div>;
       },
     },
     {
-      accessorKey: 'isPublish',
-      header: 'Trạng thái',
+      accessorKey: "isPublish",
+      header: "Trạng thái",
       cell: ({ row }) => {
-        const sold = row.getValue('isPublish') ? 'publish' : 'unpublish'
-        const product = row.original
+        const sold = row.getValue("isPublish") ? "publish" : "unpublish";
+        const product = row.original;
 
         return (
           <Select
@@ -236,46 +235,34 @@ export default function DataTableDemo({
             onValueChange={(value) => handlePublishProduct(value, product.id)}
           >
             <SelectTrigger className="w-28 text-xs">
-              <SelectValue
-                placeholder="Select a fruit"
-                className="text-xs"
-              />
+              <SelectValue placeholder="Select a fruit" className="text-xs" />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
                 <SelectLabel className="text-xs">
                   Trạng thái sản phẩm
                 </SelectLabel>
-                <SelectItem
-                  value="publish"
-                  className="text-xs"
-                >
+                <SelectItem value="publish" className="text-xs">
                   Active
                 </SelectItem>
-                <SelectItem
-                  value="unpublish"
-                  className="text-xs"
-                >
+                <SelectItem value="unpublish" className="text-xs">
                   UnActive
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
-        )
+        );
       },
     },
     {
-      id: 'actions',
+      id: "actions",
       enableHiding: false,
       cell: ({ row }) => {
-        const product = row.original
+        const product = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0"
-              >
+              <Button variant="ghost" className="h-8 w-8 p-0">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -303,67 +290,61 @@ export default function DataTableDemo({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-  ]
+  ];
+
   const table = useReactTable({
-    data: listProducts,
+    data: products,
     columns,
-    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
-      sorting,
       columnFilters,
       columnVisibility,
-      rowSelection,
     },
-  })
+  });
 
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  let page = Number(searchParams.get('page')) || 1
   const handleSetNextPage = (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams)
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
     if (page < lastPage) {
-      params.set('page', `${page + 1}`)
-      router.replace(`${pathname}?${params.toString()}`)
+      params.set("page", `${page + 1}`);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }
+  };
   const handleSetPrevPage = (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams)
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
     if (page > 1) {
-      params.set('page', `${page - 1}`)
-      router.replace(`${pathname}?${params.toString()}`)
+      params.set("page", `${page - 1}`);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }
+  };
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.set("search", searchDebounce);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [searchDebounce]);
 
   return (
     <div className="w-full bg-background p-4 rounded-md">
       <div className="flex items-center py-4 gap-4">
         <Input
           placeholder="Tìm sản phẩm..."
-          value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('name')?.setFilterValue(event.target.value)
-          }
+          defaultValue={search}
+          onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="ml-auto"
-            >
+            <Button variant="outline" className="ml-auto">
               Columns <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -383,7 +364,7 @@ export default function DataTableDemo({
                   >
                     {TypeColumn[column.id]}
                   </DropdownMenuCheckboxItem>
-                )
+                );
               })}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -403,7 +384,7 @@ export default function DataTableDemo({
                             header.getContext()
                           )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -413,7 +394,7 @@ export default function DataTableDemo({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
+                  data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -440,7 +421,7 @@ export default function DataTableDemo({
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} trên{' '}
+          {table.getFilteredSelectedRowModel().rows.length} trên{" "}
           {table.getFilteredRowModel().rows.length} cột được chọn.
         </div>
         <div className="flex-1 text-sm text-muted-foreground">
@@ -466,5 +447,5 @@ export default function DataTableDemo({
         </div>
       </div>
     </div>
-  )
+  );
 }

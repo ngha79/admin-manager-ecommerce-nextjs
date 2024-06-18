@@ -1,67 +1,40 @@
-'use server'
+"use server";
 
-import { getSession } from './account'
+import http from "@/lib/http";
+import { getUserId } from "./account";
+import { IResponsePagination } from "../types/response-pagination";
 
 export const getInventories = async ({
   page,
   limit,
 }: {
-  page: number
-  limit: number
+  page: number;
+  limit: number;
 }) => {
-  try {
-    const session = await getSession()
-
-    const res = await fetch(
-      `http://localhost:8000/inventories?page=${page}&limit=${limit}&shopId=${session.userId}`,
-      {
-        method: 'GET',
-        headers: {
-          userid: session.userId,
-          Authorization: `Bearer ${session.accessToken}`,
-          'Content-type': 'application/json',
-        },
-        cache: 'no-cache',
-      }
-    )
-    const inventories = await res.json()
-    if (!res.ok) throw inventories
-    return inventories
-  } catch (error) {
-    return {
-      message: 'Có lỗi xảy ra vui lòng thử lại sau.',
-      error: error.statusCode,
+  const userId = await getUserId();
+  return await http.get<IResponsePagination>(
+    `/inventories?page=${page}&limit=${limit}&shopId=${userId}`,
+    {
+      token: true,
+      next: {
+        tags: ["inventories"],
+      },
     }
-  }
-}
+  );
+};
 
 export const updateStockProduct = async ({
   id,
   stock,
 }: {
-  id: number
-  stock: number
+  id: number;
+  stock: number;
 }) => {
-  try {
-    const session = await getSession()
-
-    const res = await fetch(`http://localhost:8000/inventories/${id}`, {
-      method: 'PATCH',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-        'Content-type': 'application/json',
-      },
-      cache: 'no-cache',
+  return await http.patch(
+    `/inventories/${id}`,
+    {
       body: JSON.stringify({ stock }),
-    })
-    const update = await res.json()
-    if (!res.ok) throw update
-    return update
-  } catch (error) {
-    return {
-      message: 'Có lỗi xảy ra vui lòng thử lại sau.',
-      error: error.statusCode,
-    }
-  }
-}
+    },
+    { token: true }
+  );
+};

@@ -1,143 +1,143 @@
-'use client'
+"use client";
 
-import { Button, buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { updateOrder } from '@/utils/actions/orders'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { toast } from 'sonner'
+import Link from "next/link";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-const OrderAction = ({
+import { cn, ResponseExceptions } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
+import http from "@/lib/http";
+import { Check, X } from "lucide-react";
+
+interface OrderActionProps {
+  orderId: string;
+  status: string;
+  detail?: boolean;
+}
+
+const OrderAction: React.FC<OrderActionProps> = ({
   orderId,
   status,
   detail,
-}: {
-  orderId: string
-  status: string
-  detail?: boolean
 }) => {
-  const [statusOrder, setStatus] = useState<string>(status)
-  const [isLoading, setLoading] = useState<boolean>(false)
-  const router = useRouter()
+  const [statusOrder, setStatus] = useState<string>(status);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  const handleUpdateStatus = async (type: string) => {
-    setLoading(true)
-    const response = await updateOrder({
-      id: orderId,
-      status: type,
-    })
-    setLoading(false)
-    if (response.error) return toast.error(response.message)
-    setStatus(response.status)
-    return toast.success('Cập nhật đơn hàng thành công.')
-  }
+  const handleUpdateStatus = async (action: string) => {
+    setIsLoading(true);
+    try {
+      const response = await http.put<any>(
+        `/list-orders/${action}/${orderId}`,
+        { status },
+        {
+          token: true,
+        }
+      );
+      setStatus(response.payload.status);
+      toast.success("Cập nhật đơn hàng thành công.");
+    } catch (error) {
+      toast.error(ResponseExceptions.DEFAULT_ERROR);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const ActionOrder: any = {
-    pending: () => {
-      return (
-        <>
-          <Button
-            variant={'destructive'}
-            onClick={() => handleUpdateStatus('cancelled')}
-            disabled={isLoading}
-          >
-            Hủy
-          </Button>
-          <Button
-            onClick={() => handleUpdateStatus('confirmed')}
-            disabled={isLoading}
-          >
-            Xác nhận
-          </Button>
-        </>
-      )
-    },
-    cancelled: () => {
-      return (
-        <>
-          <Button
-            variant={'destructive'}
-            disabled
-          >
-            Đã hủy
-          </Button>
-        </>
-      )
-    },
-    confirmed: () => {
-      return (
-        <>
-          <Button
-            variant={'destructive'}
-            onClick={() => handleUpdateStatus('cancelled')}
-            disabled={isLoading}
-          >
-            Hủy đơn hàng
-          </Button>
-          <Button
-            onClick={() => handleUpdateStatus('shipping')}
-            disabled={isLoading}
-          >
-            Chuyển hàng
-          </Button>
-        </>
-      )
-    },
-    shipping: () => {
-      return (
-        <>
-          <Button
-            variant={'destructive'}
-            onClick={() => handleUpdateStatus('cancelled')}
-            disabled={isLoading}
-          >
-            Hủy đơn hàng
-          </Button>
-          <Button
-            onClick={() => handleUpdateStatus('delivered')}
-            variant={'success'}
-            disabled={isLoading}
-          >
-            Đã giao hàng
-          </Button>
-        </>
-      )
-    },
-    delivered: () => {
-      return (
+  const ActionOrder: Record<string, JSX.Element> = {
+    pending: (
+      <>
         <Button
-          onClick={() => handleUpdateStatus('delivered')}
-          variant={'success'}
-          disabled
+          variant="destructive"
+          onClick={() => handleUpdateStatus("cancel")}
+          disabled={isLoading}
+        >
+          <X className="w-5 h-5 mr-2" />
+          Từ chối
+        </Button>
+        <Button
+          onClick={() => handleUpdateStatus("confirm")}
+          disabled={isLoading}
+          variant="success"
+        >
+          <Check className="w-5 h-5 mr-2" /> Xác nhận
+        </Button>
+      </>
+    ),
+    cancelled: (
+      <Button variant="destructive" disabled>
+        Đã hủy
+      </Button>
+    ),
+    confirmed: (
+      <>
+        <Button
+          variant="destructive"
+          onClick={() => handleUpdateStatus("cancel")}
+          disabled={isLoading}
+        >
+          Hủy đơn hàng
+        </Button>
+        <Button
+          onClick={() => handleUpdateStatus("shipping")}
+          variant="success"
+          disabled={isLoading}
+        >
+          Giao hàng
+        </Button>
+      </>
+    ),
+    shipping: (
+      <>
+        <Button
+          variant="destructive"
+          onClick={() => handleUpdateStatus("cancel")}
+          disabled={isLoading}
+        >
+          Hủy đơn hàng
+        </Button>
+        <Button
+          onClick={() => handleUpdateStatus("delivered")}
+          variant="success"
+          disabled={isLoading}
         >
           Đã giao hàng
         </Button>
-      )
-    },
-  }
+      </>
+    ),
+    delivered: (
+      <Button
+        onClick={() => handleUpdateStatus("delivered")}
+        variant="success"
+        disabled
+      >
+        Đã giao hàng
+      </Button>
+    ),
+  };
+
   return (
-    <div className="space-x-4 flex justify-end">
+    <div className="gap-4 flex justify-end">
       {detail ? (
         <Link
           href={`/orders/${orderId}`}
-          className={cn([buttonVariants()])}
+          className={cn([buttonVariants({ variant: "outline" })])}
         >
           Chi tiết
         </Link>
       ) : null}
-      {ActionOrder?.[statusOrder]()}
+      {ActionOrder[statusOrder]}
       {!detail ? (
         <Button
-          variant={'destructive'}
           className="w-max"
-          onClick={() => router.push('/orders')}
+          disabled={isLoading}
+          onClick={() => router.push("/orders")}
         >
           Trở về
         </Button>
       ) : null}
     </div>
-  )
-}
+  );
+};
 
-export default OrderAction
+export default OrderAction;

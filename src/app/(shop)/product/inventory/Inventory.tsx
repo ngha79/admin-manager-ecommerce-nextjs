@@ -1,95 +1,71 @@
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { updateStockProduct } from '@/utils/actions/inventory'
-import Image from 'next/image'
-import React, { useState } from 'react'
-import { toast } from 'sonner'
+"use client";
 
-const Inventory = ({
-  Inventory,
-  handleUpdate,
-}: {
-  Inventory: any
-  handleUpdate: (id: number, stock: number) => void
-}) => {
-  const [isUpdate, setUpdate] = useState<boolean>(false)
-  const [stock, setStock] = useState<number>(Inventory.stock)
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { TableCell, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { format } from "date-fns";
+import { MoreHorizontal } from "lucide-react";
+import Image from "next/image";
+import React from "react";
+import UpdateInventory from "./UpdateInventory";
 
-  const handeleUpdateInventory = async () => {
-    if (stock > 0) {
-      const response = await updateStockProduct({ id: Inventory.id, stock })
-      if (response.error) return toast.error(response.message)
-      setUpdate(false)
-      handleUpdate(Inventory.id, stock)
-      return toast.success('Cập nhật số lượng sản phẩm thành công')
-    }
-    return toast.error('Số lượng sản phẩm cập nhật không phù hợp')
-  }
-
-  const handleOnChange = (e) => {
-    if (e.target.value < 0) return setStock(stock)
-    setStock(Math.floor(e.target.value))
-  }
-
-  const handleCancel = () => {
-    setStock(Inventory.stock)
-    setUpdate(false)
-  }
-
+const Inventory = ({ inventory }: { inventory: any }) => {
   return (
-    <tr className="bg-white w-full even:bg-gray-50 border-b">
-      <th
-        scope="row"
-        className="flex flex-col gap-2 px-6 py-4 font-medium text-gray-700 whitespace-nowrap dark:text-white"
-      >
+    <TableRow>
+      <TableCell className="hidden sm:table-cell">
         <Image
-          alt="image product"
-          src={Inventory.productAttribute.thumb}
-          width={120}
-          height={80}
+          alt="Product image"
+          className="aspect-square rounded-md object-cover"
+          height="64"
+          src={inventory.productAttribute.picture}
+          width="64"
         />
-        <span className="line-2">{Inventory.product.name}</span>
-      </th>
-      {isUpdate ? (
-        <td className="p-2">
-          <div className="flex justify-center">
-            <Input
-              type="number"
-              value={stock}
-              className="max-w-32 min-w-20 text-center"
-              onChange={handleOnChange}
-            />
-          </div>
-        </td>
-      ) : (
-        <td className="px-6 py-4 text-center">{Number(stock)}</td>
-      )}
-      <td className="px-6 py-4">{Inventory.productAttribute.size}</td>
-      <td className="px-6 py-4 max-md:hidden">
-        {Inventory.productAttribute.material}
-      </td>
-      <td className="px-6 py-4 text-center">
-        {isUpdate ? (
-          <div className="flex flex-col justify-center items-center sm:flex-row gap-2">
-            <Button
-              onClick={() => handleCancel()}
-              variant={'destructive'}
-            >
-              Hủy
+      </TableCell>
+      <TableCell className="font-medium">{inventory.product.name}</TableCell>
+      <TableCell>
+        <Badge variant="outline">
+          {inventory.product.isPublish ? "Active" : "Draft"}
+        </Badge>
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        {inventory.product.price}
+      </TableCell>
+      <TableCell>{inventory.stock}</TableCell>
+      <TableCell className="hidden md:table-cell text-center">
+        {inventory.product.sold}
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        {format(inventory.productAttribute.createdAt, "yyyy/MM/dd h:mm")}
+      </TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button aria-haspopup="true" size="icon" variant="ghost">
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">Toggle menu</span>
             </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="space-y-2">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <UpdateInventory inventory={inventory} />
             <Button
-              onClick={() => handeleUpdateInventory()}
-              variant={'success'}
+              variant={"ghost"}
+              className="w-full hover:bg-red-500 hover:text-white"
             >
-              Cập nhật
+              Xóa
             </Button>
-          </div>
-        ) : (
-          <Button onClick={() => setUpdate(true)}>Edit</Button>
-        )}
-      </td>
-    </tr>
-  )
-}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+};
 
-export default Inventory
+export default Inventory;

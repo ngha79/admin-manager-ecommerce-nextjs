@@ -1,62 +1,100 @@
-'use server'
+"use server";
 
-import { IAuthLoginCredentialsValidator } from '@/lib/validators/account-credentials-validator'
-import { cookies } from 'next/headers'
-import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from "next/headers";
+import { newToken } from "./cookies";
 
-export async function login(formData: IAuthLoginCredentialsValidator) {
-  try {
-    const res = await fetch('http://localhost:8000/auth/shop/login', {
-      method: 'POST',
-      body: JSON.stringify(formData),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-    const account = await res.json()
-    if (!res.ok) throw account
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000)
-    cookies().set('session', JSON.stringify(account), {
-      expires,
-      httpOnly: true,
-    })
-    return account
-  } catch (error: any) {
-    return error
-  }
+export async function login(tokens: any) {
+  const expires = 24 * 60 * 60;
+  const cookieStore = cookies();
+  cookieStore.set("accessToken", tokens.accessToken, {
+    maxAge: expires,
+    httpOnly: true,
+    path: "/",
+  });
+  cookieStore.set("refreshToken", tokens.refreshToken, {
+    maxAge: expires * 30,
+    httpOnly: true,
+    path: "/",
+  });
+  cookieStore.set("userId", tokens.id, {
+    maxAge: expires * 30,
+    httpOnly: true,
+    path: "/",
+  });
+  return tokens;
+}
+
+export async function setNewToken(tokens: any) {
+  const expires = 24 * 60 * 60;
+  const cookieStore = cookies();
+  cookieStore.set("accessToken", tokens.accessToken, {
+    maxAge: expires,
+    httpOnly: true,
+    path: "/",
+  });
+  cookieStore.set("refreshToken", tokens.refreshToken, {
+    maxAge: expires * 30,
+    httpOnly: true,
+    path: "/",
+  });
+  return tokens;
 }
 
 export async function logout() {
-  cookies().set('session', '', { expires: new Date(0) })
+  const cookieStore = cookies();
+  cookieStore.set("accessToken", "", { expires: new Date(0) });
+  cookieStore.set("userId", "", { expires: new Date(0) });
+  cookieStore.set("refreshToken", "", { expires: new Date(0) });
 }
 
 export async function getSession() {
-  const session = cookies().get('session')?.value
-  if (!session) return null
-  return await decrypt(session)
+  const session = cookies().get("accessToken")?.value;
+  if (!session) return null;
+  return session;
+}
+
+export async function getRefreshToken() {
+  const session = cookies().get("refreshToken")?.value;
+  if (!session) return null;
+  return session;
+}
+
+export async function getUserId() {
+  const session = cookies().get("userId")?.value;
+  if (!session) return "";
+  return session;
 }
 
 export async function decrypt(session: string) {
-  return await JSON.parse(session)
+  return await JSON.parse(session);
 }
 
 export async function encrypt(session: string) {
-  return await JSON.stringify(session)
+  return await JSON.stringify(session);
 }
 
-export async function updateSession(request: NextRequest) {
-  const session = request.cookies.get('session')?.value
-  if (!session) return
-
-  // Refresh the session so it doesn't expire
-  const parsed = await decrypt(session)
-  parsed.expires = new Date(Date.now() + 10 * 1000)
-  const res = NextResponse.next()
-  res.cookies.set({
-    name: 'session',
-    value: await encrypt(parsed),
-    httpOnly: true,
-    expires: parsed.expires,
-  })
-  return res
+export async function refreshToken(refreshToken: string | null) {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/shop/refresh-token`,
+    {
+      body: JSON.stringify({
+        refreshToken: refreshToken,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      cache: "no-store",
+    }
+  );
+  return response.json();
 }
+
+export const handleRefreshToken = async () => {
+  const session = await getRefreshToken();
+  const token = await refreshToken(session);
+  if (token.tokens) {
+    await newToken(token);
+  }
+  return token;
+};

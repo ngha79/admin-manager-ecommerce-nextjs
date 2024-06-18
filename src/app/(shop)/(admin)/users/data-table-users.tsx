@@ -1,10 +1,8 @@
-'use client'
+"use client";
 
-import * as React from 'react'
+import * as React from "react";
 import {
   ColumnDef,
-  ColumnFiltersState,
-  SortingState,
   VisibilityState,
   flexRender,
   getCoreRowModel,
@@ -12,11 +10,11 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from '@tanstack/react-table'
-import { ArrowUpDown, ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
+} from "@tanstack/react-table";
+import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
 
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,7 +23,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -33,44 +31,59 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import Image from 'next/image'
+} from "@/components/ui/table";
+import Image from "next/image";
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Input } from '@/components/ui/input'
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
 
-import { toast } from 'sonner'
-import { deleteUser } from '@/utils/actions/user'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { toast } from "sonner";
+import { deleteUser } from "@/utils/actions/user";
+import Link from "next/link";
+import { cn, ResponseExceptions } from "@/lib/utils";
+import { HttpError } from "@/lib/http";
+import useDebounce from "@/hooks/useDebounce";
 
 export type IUser = {
-  id: string
-  userName: string
-  email: string
-  phoneNumber: string
-  payment: number
-  avatar: string
-  background: string
-  address: IAddressUser[]
-  following: any[]
-}
+  id: string;
+  userName: string;
+  email: string;
+  phoneNumber: string;
+  payment: number;
+  avatar: string;
+  background: string;
+  address: IAddressUser[];
+  following: any[];
+};
 
 export type IAddressUser = {
-  id: string
-  address: string
-  isAddressDefault: boolean
-  phoneNumber: string
-  userName: string
+  id: string;
+  address: string;
+  isAddressDefault: boolean;
+  phoneNumber: string;
+  userName: string;
+};
+
+interface TypeColumnInterface {
+  userName: string;
+  avatar: string;
+  email: string;
+  phoneNumber: string;
+  following: string;
+
+  [key: string]: string;
 }
 
-export const TypeColumn = {
-  userName: 'Tên người dùng',
-  avatar: 'Avatar',
-  email: 'Email',
-  phoneNumber: 'Số điện thoại',
-  payment: 'Đã thanh toán',
-  following: 'Đang theo dõi',
+export const TypeColumn: TypeColumnInterface = {
+  userName: "Tên người dùng",
+  avatar: "Avatar",
+  email: "Email",
+  phoneNumber: "Số điện thoại",
+  following: "Đang theo dõi",
+};
+
+function getValue(key: string): string | undefined {
+  return TypeColumn[key];
 }
 
 export default function DataUsers({
@@ -78,122 +91,117 @@ export default function DataUsers({
   prevPage,
   nextPage,
   lastPage,
+  searchUser,
 }: {
-  users: IUser[]
-  prevPage: number | null
-  nextPage: number | null
-  lastPage: number
+  users: IUser[];
+  prevPage: number | null;
+  nextPage: number | null;
+  lastPage: number;
+  searchUser: string;
 }) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
-  const [listUsers, setListUsers] = React.useState<IUser[]>([])
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  React.useEffect(() => {
-    setListUsers(users)
-  }, [users])
+  const [search, setSearch] = React.useState<string>("");
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+
+  const searchDebounce = useDebounce(search, 500);
+
+  let page = Number(searchParams.get("page")) || 1;
+
+  const handleOnSearch = (e: {
+    target: { value: React.SetStateAction<string> };
+  }) => {
+    setSearch(e.target.value);
+  };
+
+  const handleSetNextPage = (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
+    if (page < lastPage) {
+      params.set("page", `${page + 1}`);
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  };
+
+  const handleSetPrevPage = (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
+    if (page > 1) {
+      params.set("page", `${page - 1}`);
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  };
 
   const handleDeleteUser = async (userId: string) => {
-    const res = await deleteUser({ userId })
-    if (res.error) return toast.error(res.message)
-    setListUsers(listUsers.filter((item) => item.id !== userId))
-  }
+    try {
+      await deleteUser({ userId });
+    } catch (error) {
+      if (error instanceof HttpError) {
+        return toast.error(error.payload.message);
+      }
+      toast.error(ResponseExceptions.DEFAULT_ERROR);
+    }
+  };
 
   const columns: ColumnDef<IUser>[] = [
     {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && 'indeterminate')
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: 'userName',
-      header: 'Tên người dùng',
+      accessorKey: "userName",
+      header: "Tên người dùng",
       cell: ({ row }) => {
         return (
-          <div className="capitalize w-28 line-clamp-2">
-            {row.getValue('userName')}
-          </div>
-        )
+          <div className="w-28 line-clamp-2">{row.getValue("userName")}</div>
+        );
       },
     },
     {
-      accessorKey: 'avatar',
-      header: 'Avatar',
+      accessorKey: "avatar",
+      header: "Avatar",
       cell: ({ row }) => {
-        const avatar = row.getValue('avatar')
+        const avatar = row.getValue("avatar") as string;
         return (
           <div className="flex items-center justify-center">
             <div className="md:w-24 md:h-24 w-20 hover:opacity-90 rounded-full h-20 cursor-pointer text-blue-300 bg-gray-50 hover:bg-background hover:text-blue-500 shadow-lg relative">
               <Image
                 alt="avatar user"
-                src={avatar}
+                src={avatar || "/login.png"}
                 fill
                 className="md:w-24 md:h-24 w-20 hover:opacity-90 rounded-full h-20 cursor-pointer text-blue-300 bg-gray-50 hover:bg-background hover:text-blue-500 shadow-lg relative"
               />
             </div>
           </div>
-        )
+        );
       },
     },
     {
-      accessorKey: 'email',
-      header: 'Email',
-      cell: ({ row }) => <div>{row.getValue('email')}</div>,
+      accessorKey: "email",
+      header: "Email",
+      cell: ({ row }) => <div>{row.getValue("email")}</div>,
     },
     {
-      accessorKey: 'phoneNumber',
-      header: 'Số điện thoại',
-      cell: ({ row }) => <div>{row.getValue('phoneNumber')}</div>,
+      accessorKey: "phoneNumber",
+      header: "Số điện thoại",
+      cell: ({ row }) => <div>{row.getValue("phoneNumber")}</div>,
     },
     {
-      accessorKey: 'payment',
-      header: 'Đã thanh toán',
+      accessorKey: "following",
+      header: "Đang theo dõi",
       cell: ({ row }) => {
-        const payment = parseInt(row.getValue('payment')) || 0
-        return <div className="text-center">{payment}</div>
+        const following = parseInt(row.getValue("following")) || 0;
+        return <div className="text-center">{following}</div>;
       },
     },
     {
-      accessorKey: 'following',
-      header: 'Đang theo dõi',
-      cell: ({ row }) => {
-        const following = parseInt(row.getValue('following')) || 0
-        return <div className="text-center">{following}</div>
-      },
-    },
-    {
-      id: 'actions',
+      id: "actions",
       enableHiding: false,
       cell: ({ row }) => {
-        const user = row.original
+        const user = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0"
-              >
+              <Button variant="ghost" className="h-8 w-8 p-0">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -221,68 +229,42 @@ export default function DataUsers({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-  ]
+  ];
   const table = useReactTable({
-    data: listUsers,
+    data: users,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
-      sorting,
-      columnFilters,
       columnVisibility,
-      rowSelection,
     },
-  })
+  });
 
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  let page = Number(searchParams.get('page')) || 1
-  const handleSetNextPage = (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams)
-    if (page < lastPage) {
-      params.set('page', `${page + 1}`)
-      router.replace(`${pathname}?${params.toString()}`)
-    }
-  }
-  const handleSetPrevPage = (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams)
-    if (page > 1) {
-      params.set('page', `${page - 1}`)
-      router.replace(`${pathname}?${params.toString()}`)
-    }
-  }
+  React.useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.set("search", searchDebounce);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [searchDebounce]);
 
   return (
     <div className="w-full bg-background p-4 rounded-md">
       <div className="flex md:items-center flex-col md:flex-row py-4 gap-4">
         <Input
           placeholder="Tìm người dùng..."
-          value={(table.getColumn('email')?.getFilterValue() as string) ?? ''}
-          onChange={(event) =>
-            table.getColumn('email')?.setFilterValue(event.target.value)
-          }
+          defaultValue={searchUser}
+          onChange={handleOnSearch}
           className="w-full md:max-w-sm"
         />
         <div className="flex md:justify-end gap-4 w-full">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="ml-auto"
-              >
+              <Button variant="outline" className="ml-auto">
                 Columns <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -300,15 +282,15 @@ export default function DataUsers({
                         column.toggleVisibility(!!value)
                       }
                     >
-                      {TypeColumn[column.id]}
+                      {getValue(column.id)}
                     </DropdownMenuCheckboxItem>
-                  )
+                  );
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
           <Link
             href={`/users/create`}
-            className={cn([buttonVariants(), 'flex items-center gap-2'])}
+            className={cn([buttonVariants(), "flex items-center gap-2"])}
           >
             <Plus size={18} />
             Thêm người dùng
@@ -330,7 +312,7 @@ export default function DataUsers({
                             header.getContext()
                           )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -340,7 +322,7 @@ export default function DataUsers({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
+                  data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -367,7 +349,7 @@ export default function DataUsers({
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} trên{' '}
+          {table.getFilteredSelectedRowModel().rows.length} trên{" "}
           {table.getFilteredRowModel().rows.length} cột được chọn.
         </div>
         <div className="flex-1 text-sm text-muted-foreground">
@@ -393,5 +375,5 @@ export default function DataUsers({
         </div>
       </div>
     </div>
-  )
+  );
 }

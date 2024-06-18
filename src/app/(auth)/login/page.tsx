@@ -1,7 +1,9 @@
-import Link from 'next/link'
-import { buttonVariants } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-react'
-import FormLogin from './form'
+"use client";
+
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import FormLogin from "./form";
 
 const Login = () => {
   return (
@@ -26,8 +28,8 @@ const Login = () => {
         <div className="text-center text-sm text-gray-500">
           <Link
             className={buttonVariants({
-              variant: 'link',
-              className: 'gap-1.5',
+              variant: "link",
+              className: "gap-1.5",
             })}
             href="/register"
           >
@@ -37,7 +39,7 @@ const Login = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

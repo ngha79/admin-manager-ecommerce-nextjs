@@ -1,21 +1,16 @@
 import {
-  Cloud,
   CreditCard,
-  Github,
-  Keyboard,
-  LifeBuoy,
   LogOut,
   Mail,
   MessageSquare,
-  Plus,
   PlusCircle,
   Settings,
   User,
   UserPlus,
-  Users,
-} from 'lucide-react'
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,24 +24,31 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { logout } from '@/utils/actions/account'
-import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
-import Link from 'next/link'
+} from "@/components/ui/dropdown-menu";
+import { logout } from "@/utils/actions/account";
+import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
+import { useContext } from "react";
+import { SocketContext } from "./contexts/SocketContext";
 
 export function UserDropdown() {
+  const router = useRouter();
+
+  const { user } = useContext(SocketContext);
+
   const handleLogout = async () => {
-    await logout()
-  }
+    await logout();
+    router.refresh();
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar>
           <AvatarImage
-            src="https://github.com/shadcn.png"
-            alt="@shadcn"
+            src={user?.avatar || "/login.png"}
+            alt={user?.userName}
           />
-          <AvatarFallback>CN</AvatarFallback>
+          <AvatarFallback>User</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
@@ -54,66 +56,31 @@ export function UserDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem>
-            <Link
-              href={'/profile'}
-              className="flex items-center w-full"
-            >
+            <Link href={"/profile"} className="flex items-center w-full">
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
               <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Link
-              href={'/orders'}
-              className="flex items-center w-full"
-            >
+            <Link href={"/orders"} className="flex items-center w-full">
               <CreditCard className="mr-2 h-4 w-4" />
-              <span>Orders</span>
+              <span>Đơn hàng</span>
               <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Link
-              href={'/product/list'}
-              className="flex items-center w-full"
-            >
+            <Link href={"/product/list"} className="flex items-center w-full">
               <Settings className="mr-2 h-4 w-4" />
-              <span>Product</span>
+              <span>Sản phẩm</span>
               <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <UserPlus className="mr-2 h-4 w-4" />
-              <span>Invite users</span>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem>
-                  <Mail className="mr-2 h-4 w-4" />
-                  <span>Email</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  <span>Message</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  <span>More...</span>
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuPortal>
-          </DropdownMenuSub>
           <DropdownMenuItem>
-            <Link
-              href={'/profile/detail'}
-              className="flex items-center w-full"
-            >
+            <Link href={"/profile/detail"} className="flex items-center w-full">
               <Settings className="mr-2 h-4 w-4" />
               <span>Đổi mật khẩu</span>
               <DropdownMenuShortcut>⌘C</DropdownMenuShortcut>
@@ -121,14 +88,11 @@ export function UserDropdown() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleLogout}
-          className="cursor-pointer"
-        >
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
           <LogOut className="mr-2 h-4 w-4" />
           <span>Đăng xuất</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

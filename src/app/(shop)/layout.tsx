@@ -1,24 +1,18 @@
-import Navbar from '@/components/navbar/Navbar'
-import SideBar from '@/components/sidebar/SideBar'
-import { getSession } from '@/utils/actions/account'
-import { redirect } from 'next/navigation'
-import { Suspense } from 'react'
-import Loader from '@/components/Loader'
+import Navbar from "@/components/navbar/Navbar";
+import LayoutSocket from "@/components/sockets/LayoutSocket";
+import { SocketProvider } from "@/components/contexts/SocketContext";
 
 const ShopLayout = async ({ children }: { children: React.ReactNode }) => {
-  const session = await getSession()
-  if (!session) redirect('/login')
   return (
-    <Suspense fallback={<Loader />}>
-      <div className="flex flex-col">
-        <Navbar />
-        <div className="flex overflow-hidden">
-          <SideBar />
+    <SocketProvider>
+      <LayoutSocket>
+        <div className="h-full relative">
+          <Navbar />
           {children}
         </div>
-      </div>
-    </Suspense>
-  )
-}
+      </LayoutSocket>
+    </SocketProvider>
+  );
+};
 
-export default ShopLayout
+export default ShopLayout;

@@ -59,6 +59,11 @@
   }
 }
 
+html,
+body {
+  height: 100%;
+}
+
 .swiper-pagination-bullet {
   width: 7px !important;
   height: 7px !important;
@@ -75,4 +80,14 @@
 .ck-editor__editable_inline {
   min-height: 500px !important;
   max-height: max-content !important;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* For IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }

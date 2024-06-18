@@ -1,28 +1,11 @@
-'use server'
+import http from "@/lib/http";
+import { getUserId } from "./account";
+import { IListComment } from "@/components/reviews/ListReview";
+import { IResponsePagination } from "../types/response-pagination";
 
-import { getSession } from './account'
-
-export async function getRatingShop() {
-  try {
-    const session = await getSession()
-    const res = await fetch(
-      `http://localhost:8000/comment-product/${session.userId}`,
-      {
-        method: 'PUT',
-        headers: {
-          userid: session.userId,
-          Authorization: `Bearer ${session.accessToken}`,
-          'Content-type': 'application/json',
-        },
-        cache: 'no-cache',
-      }
-    )
-    const rating = await res.json()
-    if (!res.ok) throw rating
-    return rating
-  } catch (error: any) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1234 }
-  }
+export async function getRatingShop({ shopId }: { shopId?: string }) {
+  const userId = await getUserId();
+  return await http.get<any>(`/comment-product/shop/${shopId ?? userId}`, {});
 }
 
 export async function getListRating({
@@ -33,53 +16,40 @@ export async function getListRating({
   productId,
   rating,
 }: {
-  limit: number
-  page: number
-  shopId?: string
-  order?: string
-  productId?: string
-  rating?: number
+  limit: number;
+  page: number;
+  shopId?: string;
+  order?: string;
+  productId?: string;
+  rating?: number;
 }) {
-  try {
-    let url = ''
-    if (shopId) url = url.concat(`&shopId=${shopId}`)
-    if (order) url = url.concat(`&order=${order}`)
-    if (productId) url = url.concat(`&productId=${productId}`)
-    if (rating) url = url.concat(`&rating=${rating}`)
-    const res = await fetch(
-      `http://localhost:8000/comment-product?limit=${limit}&page=${page}` + url,
-      {
-        method: 'GET',
-        headers: {
-          'Content-type': 'application/json',
-        },
-        cache: 'no-cache',
-      }
-    )
-    const list = await res.json()
-    if (!res.ok) throw list
-    return list
-  } catch (error: any) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1234 }
-  }
+  const userId = await getUserId();
+  let url = "";
+  if (order) url = url.concat(`&order=${order}`);
+  if (productId) url = url.concat(`&productId=${productId}`);
+  if (rating) url = url.concat(`&rating=${rating}`);
+  return await http.get<IResponsePagination>(
+    `/comment-product?limit=${limit}&page=${page}&shopId=${shopId ?? userId}` +
+      url,
+    {
+      next: {
+        tags: ["reviews"],
+      },
+    }
+  );
 }
 
 export const createCommentReplyUser = async (formData: any) => {
-  try {
-    const session = await getSession()
-    const res = await fetch(`http://localhost:8000/shop-comment-product`, {
-      method: 'POST',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      cache: 'no-cache',
-      body: formData,
-    })
-    const reply = await res.json()
-    if (!res.ok) throw reply
-    return reply
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1234 }
-  }
-}
+  return await http.post(`/shop-comment-product`, formData, {
+    token: true,
+  });
+};
+
+export const getCommentUser = async (id: string) => {
+  return await http.get<IListComment>(`/comment-product/comment/${id}`, {
+    next: {
+      tags: ["review"],
+      revalidate: 300,
+    },
+  });
+};

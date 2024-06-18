@@ -1,68 +1,60 @@
-'use client'
+"use client";
+
+import Link from "next/link";
+import { toast } from "sonner";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 import {
   TAuthCredentialsValidator,
   AuthCredentialsValidator,
-} from '@/lib/validators/account-credentials-validator'
-import Link from 'next/link'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { Label } from '@radix-ui/react-label'
-import { ArrowRight, Loader2 } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { useState } from 'react'
-import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
+} from "@/lib/validators/account-credentials-validator";
+import { HttpError } from "@/lib/http";
+import { Label } from "@radix-ui/react-label";
+import { Input } from "@/components/ui/input";
+import authApiRequest from "@/apiRequests/auth";
+import { cn, ResponseExceptions } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 const Register = () => {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, startTransition] = useTransition();
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<TAuthCredentialsValidator>({
     resolver: zodResolver(AuthCredentialsValidator),
-  })
-  const router = useRouter()
-  const signUp = async (
-    authCredentialsValidator: TAuthCredentialsValidator
-  ) => {
-    try {
-      const res = await fetch('http://localhost:8000/shop', {
-        method: 'POST',
-        body: JSON.stringify(authCredentialsValidator),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      const account = await res.json()
-      if (!res.ok) throw account
-      return account
-    } catch (error: any) {
-      if (error.message && typeof error.message == 'string') {
-        toast.error(error.message)
-        return
-      }
-      toast.error('Không thể đăng ký, vui lòng thử lại sau.')
-      return
-    }
-  }
+  });
+  const router = useRouter();
+
   const onSubmit = async ({
     email,
     password,
     phoneNumber,
     userName,
   }: TAuthCredentialsValidator) => {
-    setIsLoading(true)
-    const account = await signUp({ email, password, phoneNumber, userName })
-    setIsLoading(false)
-    if (account) {
-      toast.success('Đăng ký tài khoản thành công.')
-      router.push('/login')
-    }
-  }
+    startTransition(async () => {
+      try {
+        await authApiRequest.registerShop({
+          email,
+          password,
+          phoneNumber,
+          userName,
+        });
+        router.push("/login");
+        toast.success("Đăng ký tài khoản thành công.");
+      } catch (error: any) {
+        if (error instanceof HttpError) {
+          toast.error(error.payload.message);
+        } else {
+          toast.error(ResponseExceptions.DEFAULT_ERROR);
+        }
+      }
+    });
+  };
   return (
     <div className="container relative h-full flex-grow flex flex-col items-center justify-center lg:px-0">
       <div className="max-w-lg w-full flex flex-col items-center space-y-2 text-center">
@@ -77,9 +69,9 @@ const Register = () => {
             <div className="grid gap-1 py-2">
               <Label htmlFor="email">Email</Label>
               <Input
-                {...register('email')}
+                {...register("email")}
                 className={cn({
-                  'focus-visible:ring-red-500': errors.email,
+                  "focus-visible:ring-red-500": errors.email,
                 })}
                 placeholder="you@example.com"
               />
@@ -91,10 +83,10 @@ const Register = () => {
             <div className="grid gap-1 py-2">
               <Label htmlFor="password">Mật khẩu</Label>
               <Input
-                {...register('password')}
+                {...register("password")}
                 type="password"
                 className={cn({
-                  'focus-visible:ring-red-500': errors.password,
+                  "focus-visible:ring-red-500": errors.password,
                 })}
                 placeholder="Password"
               />
@@ -107,12 +99,12 @@ const Register = () => {
             <div className="grid gap-1 py-2">
               <Label htmlFor="userName">Tên shop</Label>
               <Input
-                {...register('userName')}
+                {...register("userName")}
                 type="text"
                 className={cn({
-                  'focus-visible:ring-red-500': errors.password,
+                  "focus-visible:ring-red-500": errors.password,
                 })}
-                placeholder="Password"
+                placeholder="User Shop"
               />
               {errors?.userName && (
                 <p className="text-sm text-red-500">
@@ -123,10 +115,10 @@ const Register = () => {
             <div className="grid gap-1 py-2">
               <Label htmlFor="phoneNumber">Số điện thoại</Label>
               <Input
-                {...register('phoneNumber')}
+                {...register("phoneNumber")}
                 type="text"
                 className={cn({
-                  'focus-visible:ring-red-500': errors.password,
+                  "focus-visible:ring-red-500": errors.password,
                 })}
                 placeholder="Password"
               />
@@ -156,8 +148,8 @@ const Register = () => {
         <div className="text-center text-sm text-gray-500">
           <Link
             className={buttonVariants({
-              variant: 'link',
-              className: 'gap-1.5',
+              variant: "link",
+              className: "gap-1.5",
             })}
             href="/login"
           >
@@ -167,7 +159,7 @@ const Register = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Register
+export default Register;

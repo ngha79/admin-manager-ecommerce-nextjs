@@ -1,56 +1,57 @@
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Delete, Plus } from 'lucide-react'
-import Image from 'next/image'
-import React, { useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { toast } from 'sonner'
-import { z } from 'zod'
+import { z } from "zod";
+import Image from "next/image";
+import { toast } from "sonner";
+import { Delete, Plus } from "lucide-react";
+import { useForm } from "react-hook-form";
+import React, { useRef, useState } from "react";
+
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface IProductAttribute {
-  material: string
-  size: string
-  thumb: string
-  file: File
-  id: number
+  material: string;
+  size: string;
+  thumb: string;
+  file: File;
+  id: number;
 }
 
 const productAttributeValidator = z.object({
-  material: z.string().min(1, { message: 'Bạn chưa nhập tên sản phẩm.' }),
-  size: z.string().min(1, { message: 'Bạn chưa chọn danh mục của sản phẩm.' }),
-})
+  material: z.string().min(1, { message: "Bạn chưa nhập tên sản phẩm." }),
+  size: z.string().min(1, { message: "Bạn chưa chọn danh mục của sản phẩm." }),
+});
 
-type TProductAttributeValidator = z.infer<typeof productAttributeValidator>
+type TProductAttributeValidator = z.infer<typeof productAttributeValidator>;
 
 const FormAddProductAttribute = ({
   handleAddProductAttribute,
-  listroductAttribute,
-  listroductAttributeNew,
+  listProductAttribute,
+  listProductAttributeNew,
 }: {
-  handleAddProductAttribute: (value: IProductAttribute) => void
-  listroductAttribute: IProductAttribute[]
-  listroductAttributeNew: IProductAttribute[]
+  handleAddProductAttribute: (value: IProductAttribute) => void;
+  listProductAttribute: IProductAttribute[];
+  listProductAttributeNew: IProductAttribute[];
 }) => {
-  const [image, setImage] = useState<string>('')
-  const [file, setFile] = useState<any>(null)
-  const [errorThumb, setErrorThumb] = useState<string>('')
+  const [image, setImage] = useState<string>("");
+  const [file, setFile] = useState<any>(null);
+  const [errorThumb, setErrorThumb] = useState<string>("");
 
-  const thumbProduct = useRef<HTMLInputElement>(null)
+  const thumbProduct = useRef<HTMLInputElement>(null);
   const onUploadThumb = () => {
-    thumbProduct?.current?.click()
-  }
+    thumbProduct?.current?.click();
+  };
 
   const handleUploadThumb = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const image = URL.createObjectURL(e.target.files[0])
-      setImage(image)
-      setFile(e.target.files[0])
-      setErrorThumb('')
+      const image = URL.createObjectURL(e.target.files[0]);
+      setImage(image);
+      setFile(e.target.files[0]);
+      setErrorThumb("");
     }
-  }
+  };
 
   const {
     register,
@@ -59,21 +60,21 @@ const FormAddProductAttribute = ({
     formState: { errors },
   } = useForm<TProductAttributeValidator>({
     resolver: zodResolver(productAttributeValidator),
-  })
+  });
 
   const onSubmit = async ({ material, size }: TProductAttributeValidator) => {
-    if (!image || !file) return setErrorThumb('Bạn chưa thêm ảnh.')
-    let item = listroductAttribute.find(
+    if (!image || !file) return setErrorThumb("Bạn chưa thêm ảnh.");
+    let item = listProductAttribute.find(
       (item) => item.material === material && item.size === size
-    )
+    );
     if (item) {
-      return toast.error('Dữ liệu trùng khớp!')
+      return toast.error("Dữ liệu trùng khớp!");
     }
-    item = listroductAttributeNew.find(
+    item = listProductAttributeNew.find(
       (item) => item.material === material && item.size === size
-    )
+    );
     if (item) {
-      return toast.error('Dữ liệu trùng khớp!')
+      return toast.error("Dữ liệu trùng khớp!");
     }
     handleAddProductAttribute({
       material,
@@ -81,29 +82,26 @@ const FormAddProductAttribute = ({
       thumb: image,
       file: file,
       id: 0,
-    })
-    reset({ material: '', size: '' })
-    setFile(null)
-    setImage('')
-  }
+    });
+    reset({ material: "", size: "" });
+    setFile(null);
+    setImage("");
+  };
 
   const onDelete = () => {
-    setFile(null)
-    setImage('')
-  }
+    setFile(null);
+    setImage("");
+  };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="space-y-4"
-    >
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="flex flex-col sm:grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="size">Kích cỡ</Label>
           <Input
-            {...register('size')}
+            {...register("size")}
             className={cn({
-              'focus-visible:ring-red-500': errors.size,
+              "focus-visible:ring-red-500": errors.size,
             })}
           />
           {errors?.size && (
@@ -113,9 +111,9 @@ const FormAddProductAttribute = ({
         <div className="flex flex-col gap-2">
           <Label htmlFor="material">Màu sắc, chất liệu...</Label>
           <Input
-            {...register('material')}
+            {...register("material")}
             className={cn({
-              'focus-visible:ring-red-500': errors.material,
+              "focus-visible:ring-red-500": errors.material,
             })}
           />
           {errors?.material && (
@@ -140,11 +138,7 @@ const FormAddProductAttribute = ({
           </div>
           {image ? (
             <div className="relative lg:w-64 md:w-52 md:h-40 w-40 lg:h-48 h-32 border rounded-md overflow-hidden">
-              <Image
-                alt="thumb"
-                src={image}
-                fill
-              />
+              <Image alt="thumb" src={image} fill />
               <div
                 onClick={onDelete}
                 className="absolute cursor-pointer top-0 left-0 hover:bg-gray-200/10 hover:text-background/80 text-transparent w-full h-full"
@@ -163,7 +157,7 @@ const FormAddProductAttribute = ({
         <Button className="w-max">Thêm</Button>
       </div>
     </form>
-  )
-}
+  );
+};
 
-export default FormAddProductAttribute
+export default FormAddProductAttribute;

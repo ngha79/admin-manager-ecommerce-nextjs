@@ -1,10 +1,9 @@
-'use client'
+"use client";
 
-import * as React from 'react'
+import React, { useEffect, useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
-  SortingState,
   VisibilityState,
   flexRender,
   getCoreRowModel,
@@ -12,11 +11,10 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from '@tanstack/react-table'
-import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
+} from "@tanstack/react-table";
+import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
 
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,7 +23,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -33,50 +31,55 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Input } from '@/components/ui/input'
-import { format } from 'date-fns'
-import useDebounce from '@/hooks/useDebounce'
-import { deleteVoucher } from '@/utils/actions/vouchers'
-import { toast } from 'sonner'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
+} from "@/components/ui/table";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
+import useDebounce from "@/hooks/useDebounce";
+import { deleteVoucher } from "@/utils/actions/vouchers";
+import { toast } from "sonner";
+import Link from "next/link";
+import { cn, ResponseExceptions } from "@/lib/utils";
+import { reFetchDiscounts } from "@/utils/server";
 
 export type Voucher = {
-  id: string
-  discount_name: string
-  discount_description: string
-  discount_code: string
-  discount_type: string
-  discount_value: number
-  discount_start_date: Date
-  discount_end_date: Date
-  discount_max_uses: number
-  discount_max_value: number
-  discount_use_count: number
-  discount_uses_per_user: number
-  discount_min_order_value: number
-  discount_is_active: string
-  discount_apply_type: string
+  id: string;
+  discount_name: string;
+  discount_description: string;
+  discount_code: string;
+  discount_type: string;
+  discount_value: number;
+  discount_start_date: Date;
+  discount_end_date: Date;
+  discount_max_uses: number;
+  discount_max_value: number;
+  discount_use_count: number;
+  discount_uses_per_user: number;
+  discount_min_order_value: number;
+  discount_is_active: string;
+  discount_apply_type: string;
+};
+
+interface TypeColumnInterface {
+  [key: string]: string;
 }
 
-export const TypeColumn = {
-  discount_name: 'Tên',
-  discount_description: 'Mô tả',
-  discount_code: 'Mã giảm giá',
-  discount_type: 'Kiểu giảm giá',
-  discount_value: 'Giá trị',
-  discount_start_date: 'Ngày bắt đầu',
-  discount_end_date: 'Ngày kết thúc',
-  discount_max_uses: 'Tổng số lượng',
-  discount_max_value: 'Giảm tối đa',
-  discount_use_count: 'Đã sử dụng',
-  discount_uses_per_user: 'Lượt dùng mỗi người dùng',
-  discount_min_order_value: 'Giá trị tối thiểu áp dụng',
-  discount_is_active: 'Trạng thái',
-  discount_apply_type: 'Áp dụng với sản phẩm',
-}
+export const TypeColumn: TypeColumnInterface = {
+  discount_name: "Tên",
+  discount_description: "Mô tả",
+  discount_code: "Mã giảm giá",
+  discount_type: "Kiểu giảm giá",
+  discount_value: "Giá trị",
+  discount_start_date: "Ngày bắt đầu",
+  discount_end_date: "Ngày kết thúc",
+  discount_max_uses: "Tổng số lượng",
+  discount_max_value: "Giảm tối đa",
+  discount_use_count: "Đã sử dụng",
+  discount_uses_per_user: "Lượt dùng mỗi người dùng",
+  discount_min_order_value: "Giá trị tối thiểu áp dụng",
+  discount_is_active: "Trạng thái",
+  discount_apply_type: "Áp dụng với sản phẩm",
+};
 
 export default function DataTableDemo({
   voucher,
@@ -85,231 +88,116 @@ export default function DataTableDemo({
   lastPage,
   searchVoucher,
 }: {
-  voucher: Voucher[]
-  prevPage: number | null
-  nextPage: number | null
-  lastPage: number
-  searchVoucher: string
+  voucher: Voucher[];
+  prevPage: number | null;
+  nextPage: number | null;
+  lastPage: number;
+  searchVoucher: string;
 }) {
-  const [search, setSearch] = React.useState<string>('')
-  const searchDebounce = useDebounce(search, 500)
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
+  const [search, setSearch] = useState<string>("");
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const handleDeleteVoucher = async (id: string) => {
-    const res = await deleteVoucher(id)
-    if (res.error) return toast.error(res.message)
-    toast.success('Xóa mã giảm giá thành công.')
-    router.refresh()
-  }
+    try {
+      await deleteVoucher(id);
+      await reFetchDiscounts();
+      toast.success("Xóa mã giảm giá thành công.");
+    } catch (error) {
+      toast.error(ResponseExceptions.DEFAULT_ERROR);
+    }
+  };
 
   const columns: ColumnDef<Voucher>[] = [
-    // {
-    //   id: 'select',
-    //   header: ({ table }) => (
-    //     <Checkbox
-    //       checked={
-    //         table.getIsAllPageRowsSelected() ||
-    //         (table.getIsSomePageRowsSelected() && 'indeterminate')
-    //       }
-    //       onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-    //       aria-label="Select all"
-    //     />
-    //   ),
-    //   cell: ({ row }) => (
-    //     <Checkbox
-    //       checked={row.getIsSelected()}
-    //       onCheckedChange={(value) => row.toggleSelected(!!value)}
-    //       aria-label="Select row"
-    //     />
-    //   ),
-    //   enableSorting: false,
-    //   enableHiding: false,
-    // },
     {
-      accessorKey: 'discount_name',
-      header: 'Tên',
+      accessorKey: "discount_name",
+      header: "Tên",
       cell: ({ row }) => {
         return (
           <div className="w-20 line-clamp-2">
-            {row.getValue('discount_name')}
+            {row.getValue("discount_name")}
           </div>
-        )
+        );
       },
     },
 
     {
-      accessorKey: 'discount_description',
-      header: 'Mô tả',
-      cell: ({ row }) => (
-        <div className="w-28 line-clamp-2">
-          {row.getValue('discount_description')}
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'discount_code',
+      accessorKey: "discount_code",
       header: ({ column }) => {
-        return <span className="w-max">Mã giảm giá</span>
+        return <span className="w-max">Mã giảm giá</span>;
       },
       cell: ({ row }) => {
-        const discount_code = row.getValue('discount_code') as string
-        return (
-          <div className="text-center font-medium">
-            {discount_code.toUpperCase()}
-          </div>
-        )
+        const discount_code = row.getValue("discount_code") as string;
+        return <div className="font-medium">{discount_code.toUpperCase()}</div>;
       },
     },
+
     {
-      accessorKey: 'discount_type',
+      accessorKey: "discount_use_count",
       header: ({ column }) => {
-        return <span className="w-max">Kiểu giảm giá</span>
+        return <span className="w-max">Đã sử dụng</span>;
       },
       cell: ({ row }) => {
-        const sold =
-          row.getValue('discount_type') === 'percent' ? 'Phần trăm' : 'Giá trị'
-        return <div className="text-center  w-20">{sold}</div>
+        const discount_use_count = row.getValue("discount_use_count") as number;
+        return <div className="text-center  w-20">{discount_use_count}</div>;
       },
     },
     {
-      accessorKey: 'discount_value',
+      accessorKey: "discount_is_active",
       header: ({ column }) => {
-        return <span className="w-max">Giá trị</span>
+        return <span className="w-max">Trạng thái</span>;
       },
       cell: ({ row }) => {
-        const discount_value = row.getValue('discount_value') as number
-        return <div className="text-center  w-20">{discount_value}</div>
-      },
-    },
-    {
-      accessorKey: 'discount_max_uses',
-      header: ({ column }) => {
-        return <span className="w-max">Tổng số lượng</span>
-      },
-      cell: ({ row }) => {
-        const discount_max_uses = row.getValue('discount_max_uses') as number
-        return <div className="text-center  w-20">{discount_max_uses}</div>
-      },
-    },
-    {
-      accessorKey: 'discount_max_value',
-      header: ({ column }) => {
-        return <span className="w-max">Giảm tối đa</span>
-      },
-      cell: ({ row }) => {
-        const discount_max_value = row.getValue('discount_max_value') as number
-        return <div className="text-center w-20">{discount_max_value}</div>
-      },
-    },
-    {
-      accessorKey: 'discount_use_count',
-      header: ({ column }) => {
-        return <span className="w-max">Đã sử dụng</span>
-      },
-      cell: ({ row }) => {
-        const discount_use_count = row.getValue('discount_use_count') as number
-        return <div className="text-center  w-20">{discount_use_count}</div>
-      },
-    },
-    {
-      accessorKey: 'discount_uses_per_user',
-      header: ({ column }) => {
-        return <span className="w-max">Lượt dùng mỗi người dùng</span>
-      },
-      cell: ({ row }) => {
-        const discount_uses_per_user = row.getValue(
-          'discount_uses_per_user'
-        ) as number
-        return <div className="text-center  w-20">{discount_uses_per_user}</div>
-      },
-    },
-    {
-      accessorKey: 'discount_min_order_value',
-      header: ({ column }) => {
-        return <span className="w-max">Giá trị tối thiểu áp dụngg</span>
-      },
-      cell: ({ row }) => {
-        const discount_min_order_value = row.getValue(
-          'discount_min_order_value'
-        ) as number
-        return (
-          <div className="text-center  w-20">{discount_min_order_value}</div>
-        )
-      },
-    },
-    {
-      accessorKey: 'discount_is_active',
-      header: ({ column }) => {
-        return <span className="w-max">Trạng thái</span>
-      },
-      cell: ({ row }) => {
-        const discount_is_active = row.getValue('discount_is_active') as number
+        const discount_is_active = row.getValue("discount_is_active") as number;
+        const discount_end_date = row.getValue("discount_end_date") as Date;
+        if (new Date(discount_end_date) < new Date()) {
+          return <div className="text-center  w-20">Hết thời gian áp dụng</div>;
+        }
         return (
           <div className="text-center  w-20">
-            {discount_is_active ? 'Hoạt động' : 'Ngừng hoạt động'}
+            {discount_is_active ? "Hoạt động" : "Chưa áp dụng"}
           </div>
-        )
+        );
       },
     },
+
     {
-      accessorKey: 'discount_apply_type',
+      accessorKey: "discount_start_date",
       header: ({ column }) => {
-        return <span className="w-max">Áp dụng với sản phẩm</span>
+        return <span className="w-max">Ngày bắt đầu</span>;
       },
       cell: ({ row }) => {
-        const discount_apply_type =
-          row.getValue('discount_apply_type') === 'all'
-            ? 'Tất cả'
-            : 'Sản phẩm chỉ định'
-        return <div className="text-center  w-20">{discount_apply_type}</div>
-      },
-    },
-    {
-      accessorKey: 'discount_start_date',
-      header: ({ column }) => {
-        return <span className="w-max">Ngày bắt đầu</span>
-      },
-      cell: ({ row }) => {
-        const discount_start_date = row.getValue('discount_start_date') as Date
+        const discount_start_date = row.getValue("discount_start_date") as Date;
         return (
           <div className="text-center  w-20">
-            {format(new Date(discount_start_date), 'hh:mm MM/dd/yyyy')}
+            {format(new Date(discount_start_date), "hh:mm MM/dd/yyyy")}
           </div>
-        )
+        );
       },
     },
     {
-      accessorKey: 'discount_end_date',
+      accessorKey: "discount_end_date",
       header: ({ column }) => {
-        return <span className="w-max">Ngày kết thúc</span>
+        return <span className="w-max">Ngày kết thúc</span>;
       },
       cell: ({ row }) => {
-        const discount_end_date = row.getValue('discount_end_date') as Date
+        const discount_end_date = row.getValue("discount_end_date") as Date;
         return (
           <div className="text-center  w-20">
-            {format(new Date(discount_end_date), 'hh:mm MM/dd/yyyy')}
+            {format(new Date(discount_end_date), "hh:mm MM/dd/yyyy")}
           </div>
-        )
+        );
       },
     },
     {
-      id: 'actions',
+      id: "actions",
       enableHiding: false,
       cell: ({ row }) => {
-        const voucher = row.original
+        const voucher = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0"
-              >
+              <Button variant="ghost" className="h-8 w-8 p-0">
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -337,59 +225,62 @@ export default function DataTableDemo({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )
+        );
       },
     },
-  ]
+  ];
+
   const table = useReactTable({
     data: voucher,
     columns,
-    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
-      sorting,
       columnFilters,
       columnVisibility,
-      rowSelection,
     },
-  })
+  });
 
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  let page = Number(searchParams.get('page')) || 1
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  let page = Number(searchParams.get("page")) || 1;
+
   const handleSetNextPage = (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams)
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
     if (page < lastPage) {
-      params.set('page', `${page + 1}`)
-      router.replace(`${pathname}?${params.toString()}`)
+      params.set("page", `${page + 1}`);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }
+  };
+
   const handleSetPrevPage = (e: { preventDefault: () => void }) => {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams)
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams);
     if (page > 1) {
-      params.set('page', `${page - 1}`)
-      router.replace(`${pathname}?${params.toString()}`)
+      params.set("page", `${page - 1}`);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }
+  };
 
-  const handleOnSearch = (e) => {
-    setSearch(e.target.value)
-  }
+  const searchDebounce = useDebounce(search, 500);
 
-  React.useEffect(() => {
-    const params = new URLSearchParams(searchParams)
-    params.set('search', searchDebounce)
-    router.replace(`${pathname}?${params.toString()}`)
-  }, [searchDebounce])
+  const handleOnSearch = (e: {
+    target: { value: React.SetStateAction<string> };
+  }) => {
+    setSearch(e.target.value);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.set("search", searchDebounce);
+    router.replace(`${pathname}?${params.toString()}`);
+  }, [searchDebounce]);
 
   return (
     <div className="w-full bg-background p-4 rounded-md">
@@ -400,19 +291,10 @@ export default function DataTableDemo({
           onChange={handleOnSearch}
           className="max-w-sm"
         />
-        <Link
-          href={'/vouchers/create'}
-          className={cn(buttonVariants(), 'flex items-center gap-2')}
-        >
-          <Plus size={18} />
-          Thêm mã giảm giá mới
-        </Link>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="ml-auto"
-            >
+            <Button variant="outline" className="ml-auto">
               Hiển thị <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -432,10 +314,17 @@ export default function DataTableDemo({
                   >
                     {TypeColumn[column.id]}
                   </DropdownMenuCheckboxItem>
-                )
+                );
               })}
           </DropdownMenuContent>
         </DropdownMenu>
+        <Link
+          href={"/vouchers/create"}
+          className={cn(buttonVariants(), "flex items-center gap-2")}
+        >
+          <Plus size={18} />
+          Thêm mã giảm giá mới
+        </Link>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -452,7 +341,7 @@ export default function DataTableDemo({
                             header.getContext()
                           )}
                     </TableHead>
-                  )
+                  );
                 })}
               </TableRow>
             ))}
@@ -462,7 +351,7 @@ export default function DataTableDemo({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
+                  data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -489,7 +378,7 @@ export default function DataTableDemo({
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} trên{' '}
+          {table.getFilteredSelectedRowModel().rows.length} trên{" "}
           {table.getFilteredRowModel().rows.length} cột được chọn.
         </div>
         <div className="flex-1 text-sm text-muted-foreground">
@@ -515,5 +404,5 @@ export default function DataTableDemo({
         </div>
       </div>
     </div>
-  )
+  );
 }

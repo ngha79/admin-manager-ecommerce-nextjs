@@ -1,115 +1,58 @@
-'use server'
-
-import { getSession } from './account'
+import http from "@/lib/http";
+import { getSession } from "./account";
+import { IResponsePagination } from "../types/response-pagination";
+import { IUser } from "../types/user";
 
 export const getListUsers = async ({
   page = 1,
   limit = 20,
-  search = '',
+  search = "",
 }: {
-  page: number
-  limit: number
-  search?: string
+  page: number;
+  limit: number;
+  search?: string;
 }) => {
-  try {
-    const session = await getSession()
-    const res = await fetch(
-      `http://localhost:8000/users?page=${page}&limit=${limit}&search=${search}`,
-      {
-        method: 'GET',
-        headers: {
-          userid: session.userId,
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        cache: 'no-cache',
-      }
-    )
-    const users = await res.json()
-    if (!res.ok) throw users
-    return users
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1421 }
-  }
-}
+  return await http.get<IResponsePagination>(
+    `/users?page=${page}&limit=${limit}&search=${search}`,
+    {
+      next: {
+        tags: ["users"],
+      },
+    }
+  );
+};
 
 export const deleteUser = async ({ userId }: { userId: string }) => {
-  try {
-    const session = await getSession()
-    const res = await fetch(`http://localhost:8000/users/${userId}`, {
-      method: 'DELETE',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-    })
-    const users = await res.json()
-    if (!res.ok) throw users
-    return users
-  } catch (error) {
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1421 }
-  }
-}
+  const res = await http.delete(
+    `/users/${userId}`,
+    {},
+    {
+      token: true,
+    }
+  );
+  return res;
+};
 
 export const createUser = async (data: any) => {
-  try {
-    const session = await getSession()
-    const res = await fetch(`http://localhost:8000/users`, {
-      method: 'POST',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: data,
-    })
-    const users = await res.json()
-    if (!res.ok) throw users
-    return users
-  } catch (error) {
-    if (error.message) {
-      return error
-    }
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1421 }
-  }
-}
+  const res = await http.post(`/users`, data, {
+    token: true,
+  });
+  return res;
+};
 
 export const getProfileUser = async (userId: string) => {
-  try {
-    const res = await fetch(`http://localhost:8000/users/${userId}`, {
-      method: 'GET',
-      cache: 'no-cache',
-    })
-    const users = await res.json()
-    if (!res.ok) throw users
-    return users
-  } catch (error) {
-    if (error.message) {
-      return error
-    }
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1421 }
-  }
-}
+  const res = await http.get<IUser>(`/users/${userId}`, {
+    cache: "no-store",
+  });
+  return res;
+};
 
 export const updateProfileUserByAdmin = async (
   userId: string,
   formData: any
 ) => {
-  try {
-    const session = await getSession()
-    const res = await fetch(`http://localhost:8000/users/${userId}`, {
-      method: 'PUT',
-      headers: {
-        userid: session.userId,
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      body: formData,
-    })
-    const users = await res.json()
-    if (!res.ok) throw users
-    return users
-  } catch (error) {
-    if (error.message) {
-      return error
-    }
-    return { message: 'Có lỗi xảy ra vui lòng thử lại sau.', error: 1421 }
-  }
-}
+  const res = await http.put(`/users/${userId}`, formData, {
+    token: true,
+  });
+  return res;
+};
