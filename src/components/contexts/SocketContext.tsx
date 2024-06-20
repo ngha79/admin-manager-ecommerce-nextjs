@@ -31,10 +31,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       });
       setUser(response.payload);
     } catch (error) {
-      if (error instanceof HttpError) {
-        console.log(error.payload.message);
-      }
-      console.log("Get Profile Shop Error", error);
+      console.log("Get Profile Shop Error");
     }
   };
 

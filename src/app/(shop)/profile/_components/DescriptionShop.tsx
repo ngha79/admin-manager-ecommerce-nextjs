@@ -106,9 +106,7 @@ const DescriptionShop = ({ description }: { description: string }) => {
                         this?.image?.get()
                       );
                     })
-                    .catch((err) => {
-                      console.log(err);
-                    });
+                    .catch((err) => {});
                   return false;
                 },
               },

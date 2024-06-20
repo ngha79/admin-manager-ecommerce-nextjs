@@ -43,7 +43,6 @@ export default function LayoutSocket({
     };
 
     const handleMessageDelete = ({ message, conversation }: IProps) => {
-      console.log(message, conversation);
       conversationStore.deleteMessageConversation(message, conversation.id);
     };
 
@@ -79,7 +78,7 @@ export default function LayoutSocket({
       );
       conversationStore.setConversations(data, nextPage);
     } catch (error) {
-      console.log("Get Conversations Error", error);
+      console.log("Get Conversations Error");
     } finally {
       conversationStore.setLoading(false);
     }
@@ -97,7 +96,7 @@ export default function LayoutSocket({
       );
       notificationStore.setNotification(data, nextPage);
     } catch (error) {
-      console.log("Get Notifications Error", error);
+      console.log("Get Notifications Error");
     } finally {
       notificationStore.setLoading();
     }

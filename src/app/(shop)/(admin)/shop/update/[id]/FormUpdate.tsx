@@ -321,9 +321,7 @@ const FormUpdate = ({ user }: { user: IShop }) => {
                         this?.image?.get()
                       );
                     })
-                    .catch((err) => {
-                      console.log(err);
-                    });
+                    .catch((err) => {});
                   return false;
                 },
               },
