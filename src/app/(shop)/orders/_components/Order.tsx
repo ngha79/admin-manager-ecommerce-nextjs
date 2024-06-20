@@ -6,6 +6,7 @@ import ProductOrder from "./ProductOrder";
 import OrderAction from "./OrderAction";
 import { IListOrder } from "@/utils/types/product";
 import { Button } from "@/components/ui/button";
+import ButtonChat from "@/components/conversation/ButtonChat";
 
 const StatusOrder: any = {
   pending: (
@@ -63,10 +64,7 @@ const Order = ({ orderData }: { orderData: IListOrder }) => {
           className="w-10 h-10 rounded-full border"
         />
         <span className="font-medium">{user.userName}</span>
-        <Button className="gap-1 ml-4">
-          <MessageCircle size={18} />
-          Chat ngay
-        </Button>
+        <ButtonChat userId={user.id} />
       </div>
       <div className="flex flex-col gap-2">
         {order.map((item: any) => (

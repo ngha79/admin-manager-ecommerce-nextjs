@@ -7,6 +7,7 @@ import { sub, formatDistance } from "date-fns";
 import { OptionConversation } from "./OptionConversation";
 
 const Conversation = ({ conversation }: { conversation: any }) => {
+  console.log(conversation);
   return (
     <Link
       href={`/messages/${conversation.id}`}

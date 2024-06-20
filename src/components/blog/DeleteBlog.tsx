@@ -23,9 +23,9 @@ const DeleteBlog = ({ blogId }: { blogId: string }) => {
   const handleDeleteBlog = async () => {
     try {
       await deleteBlog(blogId);
-      router.push("/blog");
-      await reFetchBlog();
       toast.success("Xóa bài viết thành công");
+      await reFetchBlog();
+      router.push("/blog");
     } catch (error) {
       toast.error(ResponseExceptions.DEFAULT_ERROR);
     }

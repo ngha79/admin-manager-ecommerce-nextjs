@@ -30,7 +30,7 @@ const Transactions = async () => {
     });
     transactions = response.payload.data;
   } catch (error) {
-    return transactions;
+    return null;
   }
 
   return (

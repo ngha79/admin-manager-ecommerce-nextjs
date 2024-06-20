@@ -57,10 +57,7 @@ export const getListShops = async ({
   if (isActive) url += `&isActive=${isActive}`;
   if (order) url += `&order=${order}`;
   return http.get<IResponsePagination>(`/shop` + url, {
-    next: {
-      tags: ["shopList"],
-      revalidate: 3600,
-    },
+    cache: "no-store",
   });
 };
 

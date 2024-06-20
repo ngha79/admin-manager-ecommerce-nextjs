@@ -8,6 +8,7 @@ import { getOrderById } from "@/utils/actions/orders";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { HttpError } from "@/lib/http";
+import ButtonChat from "@/components/conversation/ButtonChat";
 
 const StatusOrder: any = {
   pending: (
@@ -89,10 +90,7 @@ const Page = async ({ params }: { params: { orderId: string } }) => {
             className="w-10 h-10 rounded-full border"
           />
           <span className="font-medium">{order.user.userName}</span>
-          <Button className="gap-1 ml-4">
-            <MessageCircle size={18} />
-            Chat ngay
-          </Button>
+          <ButtonChat userId={order.user.id} />
         </div>
         <div className="flex flex-col bg-background rounded-md">
           <div className="grid grid-cols-7 text-gray-500 p-4 max-md:text-sm">

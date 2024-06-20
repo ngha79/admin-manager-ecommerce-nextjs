@@ -19,9 +19,6 @@ export const getListOrders = async ({
     `/list-orders/shop-list?page=${page}&limit=${limit}&shopId=` + url,
     {
       token: true,
-      next: {
-        tags: ["orders"],
-      },
     }
   );
 };
@@ -44,5 +41,5 @@ export const updateOrder = async ({
 };
 
 export const getOrderById = async ({ id }: { id: string }) => {
-  return await http.get<any>(`/list-orders/${id}`, {});
+  return await http.get<any>(`/list-orders/${id}`, { cache: "no-store" });
 };

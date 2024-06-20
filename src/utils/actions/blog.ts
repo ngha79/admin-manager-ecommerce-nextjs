@@ -37,7 +37,7 @@ export const getListBlog = async ({
 };
 
 export const getBlog = async (id: string) => {
-  return await http.get<TBlog>(`/blog/${id}`, { cache: "no-store" });
+  return await http.get<TBlog>(`/blog/${id}`);
 };
 
 export const createTopic = async (body: any) => {

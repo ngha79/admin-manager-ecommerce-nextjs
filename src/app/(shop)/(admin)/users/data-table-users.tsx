@@ -14,7 +14,6 @@ import {
 import { ChevronDown, MoreHorizontal, Plus } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
